@@ -33,20 +33,6 @@ def get_largest_contur(bin_image_, plot_=False):
   return black_image
 
 
-def find_histogram_peak_and_std(image, channel_index):
-  histogram = cv2.calcHist([image], [channel_index], None, [256], [0, 256])
-  histogram = histogram.ravel() / histogram.sum()
-
-  indices = np.arange(0, 256)
-  mean = (histogram * indices).sum()
-  std_dev = np.sqrt(np.sum(histogram * ((indices - mean) ** 2)))
-  peak_intensity = np.argmax(histogram)
-  if std_dev == np.nan:
-    std_dev = 1
-
-  return peak_intensity, std_dev
-
-
 def erode_sub_count(binary_image, filename=None, plot_=False):
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=3)
