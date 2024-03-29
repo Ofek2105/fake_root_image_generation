@@ -7,21 +7,6 @@ channel_name = {0: 'blue', 1: 'green', 2: 'red'}
 channel_code = {0: 'b', 1: 'g', 2: 'r'}
 
 
-def plot_img_hists(img, chan_range=-1, bins=-1):
-  fig, axs = plt.subplots(1, 3, figsize=(15, 5))
-  for i in range(3):
-    channel_ = img[:, :, i]
-    axs[i].hist(channel_.ravel(), bins=256, color=channel_name[i], alpha=0.7)
-    axs[i].set_title(f'{channel_code[i]} Channel Histogram')
-    axs[i].set_xlim([0, 255])
-    if chan_range == i:
-      axs[i].axvline(x=bins[0], color='k', linestyle='-', label='x=120')
-      axs[i].axvline(x=bins[1], color='k', linestyle='-', label='x=180')
-      axs[i].legend(loc='upper left')
-
-  plt.show()
-
-
 def img_intensity_range(img, bins, plot=False):
   img_ch = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   # img_ch = img[:, :, chan_num]
@@ -33,29 +18,6 @@ def img_intensity_range(img, bins, plot=False):
     plt.imshow(mask, cmap='gray')
     plt.show()
   return mask
-
-
-def plot_many_binary_images_for_each_channel_range(img):
-  range_ = range(50, 80, 110, 140, 170, 200, 230)
-  row_size = len(list(range_))
-  fig, axes = plt.subplots(row_size, 3, figsize=(40, 60))
-
-  for chan in range(3):
-    col = 0
-    for base_bin in range_:
-      bin_range_temp = (base_bin, 256)
-      binary_image = img_intensity_range(img, chan, bin_range_temp, plot=False)
-
-      ax = axes[col, chan]
-      ax.set_title(f'ch:{channel_name[chan]}, ra:{bin_range_temp}')
-      ax.title.set_size(48)
-      ax.imshow(binary_image, cmap='gray')  # Use grayscale color map for binary images
-      ax.axis('off')  # Turn off axis
-      col += 1  # Move to the next column
-
-  plt.subplots_adjust(hspace=0.1, wspace=0.1)
-
-  plt.show()
 
 
 def get_largest_contur(bin_image_, plot_=False):
@@ -86,7 +48,6 @@ def find_histogram_peak_and_std(image, channel_index):
 
 
 def erode_sub_count(binary_image, filename=None, plot_=False):
-
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=3)
 
@@ -179,21 +140,24 @@ def draw_contours(original_image, contours_, plot_=False):
   return original_image
 
 
-if __name__ == '__main__':
-  image = cv2.imread(r'TEST DATA/BELL PEPEER/SR_P1_X8.png')
-
-  plot = False
+def get_image_hair_count(image_path, plot_report=False):
+  image = cv2.imread(image_path)
   right_tail_percent_th = 0.75
 
   # hist_peak, std = find_histogram_peak_and_std(image, chosen_channel)
-  x_pos = find_right_tail_threshold(image, right_tail_percent_th, plot_=plot)
+  x_pos = find_right_tail_threshold(image, right_tail_percent_th, plot_=plot_report)
   chosen_range = (int(x_pos), 255)
 
   bin_image = img_intensity_range(image,
-                                  chosen_range, plot=plot)
-  root_image = get_largest_contur(bin_image, plot)
-  hairs_num, _, hair_contours = erode_sub_count(root_image, filename=None, plot_=plot)
+                                  chosen_range, plot=plot_report)
+  root_image = get_largest_contur(bin_image, plot_report)
+  hairs_num, _, hair_contours = erode_sub_count(root_image, filename=None, plot_=plot_report)
 
-  original_image_with_contours = draw_contours(image, hair_contours)
+  original_image_with_contours = draw_contours(image, hair_contours, plot_report)
 
-  print(f'range {chosen_range} Hairs number: {hairs_num}')
+  return hairs_num
+
+
+if __name__ == '__main__':
+  n_hairs = get_image_hair_count(r'TEST DATA/BELL PEPEER/SR_P1_X8.png', plot_report=True)
+  print(f'Hairs number: {n_hairs}')
