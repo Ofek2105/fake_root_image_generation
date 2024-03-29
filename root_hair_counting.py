@@ -1,18 +1,15 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import time
 
-channel_name = {0: 'blue', 1: 'green', 2: 'red'}
-channel_code = {0: 'b', 1: 'g', 2: 'r'}
+RIGHT_TAIL_THRESHOLD = 0.75
 
 
 def img_intensity_range(img, bins, plot=False):
   img_ch = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-  # img_ch = img[:, :, chan_num]
   mask = np.zeros_like(img_ch)
   mask[(img_ch >= bins[0]) & (img_ch <= bins[1])] = 255
-  # mask[(img_ch < bins[0]) & (img_ch > bins[1])] = 0
+
   if plot:
     plt.title(f'only {bins} range pixels')
     plt.imshow(mask, cmap='gray')
@@ -33,17 +30,17 @@ def get_largest_contur(bin_image_, plot_=False):
   return black_image
 
 
-def erode_sub_count(binary_image, filename=None, plot_=False):
+def get_hairs_contours(binary_image, filename=None, plot_=False):
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=3)
 
   image_hairs_highlight = draw_overlay_on_canvas(binary_image, hairs_dilated)
-  contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-  fig, ax = plt.subplots(1, 3, figsize=(45, 15))
-  font_size = 50
+  hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
   if plot_:
+    fig, ax = plt.subplots(1, 3, figsize=(45, 15))
+    font_size = 50
+
     ax[0].imshow(binary_image, cmap='gray')
     ax[0].set_title('Base Binary image', fontsize=font_size)
 
@@ -51,7 +48,7 @@ def erode_sub_count(binary_image, filename=None, plot_=False):
     ax[1].set_title('Found Hair Tips', fontsize=font_size)
 
     ax[2].imshow(image_hairs_highlight, cmap='gray')
-    ax[2].set_title(f'SR (our method) x8 num={len(contours)}', fontsize=font_size)
+    ax[2].set_title(f'Hair Num = {len(hairs_contours)}', fontsize=font_size)
     plt.axis('off')
     plt.show()
 
@@ -61,15 +58,16 @@ def erode_sub_count(binary_image, filename=None, plot_=False):
     cv2.imwrite(file1, binary_image)
     cv2.imwrite(file2, image_hairs_highlight)
 
-  return len(contours), hairs_bin_image, contours
+  return hairs_contours
 
 
 def get_hairs_tips_bin_image(binary_image):
   kernel = np.ones((3, 3), np.uint8)
-  erosion = cv2.erode(binary_image, kernel, iterations=1)
-  dilation = cv2.dilate(erosion, kernel, iterations=1)
-  dilation = cv2.morphologyEx(dilation, cv2.MORPH_CLOSE, kernel)
-  hairs = cv2.subtract(binary_image, dilation)
+  # erosion = cv2.erode(binary_image, kernel, iterations=1)
+  # dilation = cv2.dilate(erosion, kernel, iterations=1)
+  bin_image_morph = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
+  bin_image_morph = cv2.morphologyEx(bin_image_morph, cv2.MORPH_CLOSE, kernel)
+  hairs = cv2.subtract(binary_image, bin_image_morph)
   return hairs
 
 
@@ -82,7 +80,7 @@ def draw_overlay_on_canvas(canvas_image, overlay_image):
   return canvas_color
 
 
-def find_right_tail_threshold(img, percentage, plot_=False):
+def find_right_tail_threshold(img, plot_=False):
   vals = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).flatten()
   counts, bins = np.histogram(vals, range(256))
 
@@ -92,7 +90,7 @@ def find_right_tail_threshold(img, percentage, plot_=False):
   sum_ = 0
   for i in range(len(right_hist)):
     sum_ += right_hist[i]
-    if sum_ / right_hist_sum > percentage:
+    if sum_ / right_hist_sum > RIGHT_TAIL_THRESHOLD:
       break
 
   pos = peak_x + i
@@ -104,7 +102,7 @@ def find_right_tail_threshold(img, percentage, plot_=False):
       bar_list[j].set_color('red')
     plt.xlim([-0.5, 255.5])
     plt.text(peak_x + 2, y_text, f'Peak\n100%', fontsize=10, bbox=dict(facecolor='red', alpha=0.8))
-    plt.text(peak_x + i + 2, y_text, f'{int((1 - percentage) * 100)}%', fontsize=10,
+    plt.text(peak_x + i + 2, y_text, f'{int((1 - RIGHT_TAIL_THRESHOLD) * 100)}%', fontsize=10,
              bbox=dict(facecolor='red', alpha=0.8))
 
     plt.axvline(x=pos, color='k', linestyle='-', label=f'x={pos}')
@@ -126,24 +124,24 @@ def draw_contours(original_image, contours_, plot_=False):
   return original_image
 
 
+def get_root_and_hairs_mask(image, plot_report):
+  x_pos = find_right_tail_threshold(image, plot_=plot_report)
+  chosen_range = (int(x_pos), 255)
+  bin_image = img_intensity_range(image, chosen_range, plot=plot_report)
+  root_image = get_largest_contur(bin_image, plot_report)
+  return root_image
+
+
 def get_image_hair_count(image_path, plot_report=False):
   image = cv2.imread(image_path)
-  right_tail_percent_th = 0.75
-
-  # hist_peak, std = find_histogram_peak_and_std(image, chosen_channel)
-  x_pos = find_right_tail_threshold(image, right_tail_percent_th, plot_=plot_report)
-  chosen_range = (int(x_pos), 255)
-
-  bin_image = img_intensity_range(image,
-                                  chosen_range, plot=plot_report)
-  root_image = get_largest_contur(bin_image, plot_report)
-  hairs_num, _, hair_contours = erode_sub_count(root_image, filename=None, plot_=plot_report)
+  root_bin_image = get_root_and_hairs_mask(image, plot_report)
+  hair_contours = get_hairs_contours(root_bin_image, filename=None, plot_=plot_report)
 
   original_image_with_contours = draw_contours(image, hair_contours, plot_report)
 
-  return hairs_num
+  return len(hair_contours)
 
 
 if __name__ == '__main__':
-  n_hairs = get_image_hair_count(r'TEST DATA/BELL PEPEER/SR_P1_X8.png', plot_report=True)
+  n_hairs = get_image_hair_count(r'TEST DATA/BELL PEPEER/SR_P1_X2.png', plot_report=True)
   print(f'Hairs number: {n_hairs}')
