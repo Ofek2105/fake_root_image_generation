@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
+import os
+import time
 
 RIGHT_TAIL_THRESHOLD = 0.75
 
@@ -32,7 +34,7 @@ def get_largest_contur(bin_image_, plot_=False):
 
 def get_hairs_contours(binary_image, filename=None, plot_=False):
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
-  hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=3)
+  hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=1)
 
   image_hairs_highlight = draw_overlay_on_canvas(binary_image, hairs_dilated)
   hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -47,16 +49,20 @@ def get_hairs_contours(binary_image, filename=None, plot_=False):
     ax[1].imshow(hairs_dilated, cmap='gray')
     ax[1].set_title('Found Hair Tips', fontsize=font_size)
 
-    ax[2].imshow(image_hairs_highlight, cmap='gray')
-    ax[2].set_title(f'Hair Num = {len(hairs_contours)}', fontsize=font_size)
+    ax[2].imshow(image_hairs_highlight)
+    ax[2].set_title(f'SR (our method) Num = {len(hairs_contours)}', fontsize=font_size)
     plt.axis('off')
     plt.show()
 
-  if filename is not None:
-    file1 = rf'res\mine_good\{filename}_bin.png'
-    file2 = rf'res\mine_good\{filename}_bin_with_tips.png'
-    cv2.imwrite(file1, binary_image)
-    cv2.imwrite(file2, image_hairs_highlight)
+  # if filename is not None:
+  file2 = rf'TEST DATA\results\lr\lr_bell.png'
+  # cv2.imwrite(file1, binary_image)
+  plt.imshow(image_hairs_highlight)
+  # plt.title(f'SR (our method) {filename.split(" ")[-1]} Num = {len(hairs_contours)}', fontsize=25)
+  plt.title(f'Bell Pepper Num = {len(hairs_contours)}')
+  plt.axis('off')
+  plt.savefig(file2)
+  # cv2.imwrite(file2, image_hairs_highlight)
 
   return hairs_contours
 
@@ -111,9 +117,10 @@ def find_right_tail_threshold(img, plot_=False):
   return pos
 
 
-def draw_contours(original_image, contours_, plot_=False):
+def draw_contours(original_image, contours_, color=None, plot_=False):
   for contour in contours_:
-    color = np.random.randint(0, 255, size=3).tolist()  # Generate a random color
+    if color is None:
+      color = np.random.randint(0, 255, size=3).tolist()  # Generate a random color
     cv2.drawContours(original_image, [contour], -1, color, 2)  # -1 means drawing all contours
 
   if plot_:
@@ -132,16 +139,40 @@ def get_root_and_hairs_mask(image, plot_report):
   return root_image
 
 
+def get_title(full_path):
+  title_name = full_path.split('\\')[-1].split('.')[0]
+  return " ".join(title_name.split('_'))
+
+
+def save_plot(image, title, path):
+  plt.imshow(image, cmap='gray')
+  plt.title(title, fontsize=25)
+  plt.axis('off')
+  plt.savefig(path)
+
+
 def get_image_hair_count(image_path, plot_report=False):
+  # save_path = r'TEST DATA/results/lr/lr_bell.png'
+  # file_title = get_title(image_path)
   image = cv2.imread(image_path)
   root_bin_image = get_root_and_hairs_mask(image, plot_report)
   hair_contours = get_hairs_contours(root_bin_image, filename=None, plot_=plot_report)
+  hair_num = len(hair_contours)
 
   original_image_with_contours = draw_contours(image, hair_contours, plot_report)
+  # bin_image_with_contours = draw_contours(root_bin_image, hair_contours, (0, 255, 0), plot_report)
 
-  return len(hair_contours)
+  # save_plot(bin_image_with_contours, f'Bell Pepper Num = {hair_num}', save_path)
+  return hair_num
 
 
 if __name__ == '__main__':
-  n_hairs = get_image_hair_count(r'TEST DATA/BELL PEPEER/SR_P1_X2.png', plot_report=True)
-  print(f'Hairs number: {n_hairs}')
+  full_path = r'TEST DATA/base/bell_lr.jpg'
+  n_hairs = get_image_hair_count(full_path, plot_report=True)
+  print(n_hairs)
+
+  # base_path = r'TEST DATA\\ARBIDIOPSIS'
+  # for file_name in os.listdir(base_path):
+  #   full_path = os.path.join(base_path, file_name)
+  #   n_hairs = get_image_hair_count(full_path, plot_report=False)
+  #   print(f'{file_name} Hairs number: {n_hairs}')

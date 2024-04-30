@@ -42,11 +42,11 @@ class RootImageGenerator:
 
   def draw_connections(self, bin_img, lin1, lin2):
     for lin in [lin1, lin2]:
-        for i in range(len(lin) - 1):
-            start = np.clip(lin[i], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-            end = np.clip(lin[i + 1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-            rr, cc = draw_line(start[1], start[0], end[1], end[0])
-            bin_img[rr, cc] = 1
+      for i in range(len(lin) - 1):
+        start = np.clip(lin[i], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
+        end = np.clip(lin[i + 1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
+        rr, cc = draw_line(start[1], start[0], end[1], end[0])
+        bin_img[rr, cc] = 1
 
     # Connect the ends of lin1 and lin2 to form a closed shape
     start = np.clip(lin1[0], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
@@ -58,7 +58,6 @@ class RootImageGenerator:
     end = np.clip(lin2[-1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
     rr, cc = draw_line(start[1], start[0], end[1], end[0])
     bin_img[rr, cc] = 1
-
 
   def draw_hairs(self, bin_image):
     for i in range(0, len(self.points), max(1, len(self.points) // self.hair_n)):
@@ -90,13 +89,13 @@ class RootImageGenerator:
     return binary_image
 
 
-# Generate points for the root shape
-x = np.linspace(50, 400, 500)  # More points for a smoother curve
+# Generate main_root_points for the root shape
+x = np.linspace(50, 400, 500)  # More main_root_points for a smoother curve
 y = 100 + np.sin(x / 50) * 20 + np.sin(x / 100) * 40  # Combination of sine waves
 
 points = np.vstack((x, y)).T
 
-# Initialize the RootImageGenerator with the points and other desired parameters
+# Initialize the RootImageGenerator with the main_root_points and other desired parameters
 root_image_generator = RootImageGenerator(points)
 
 # Generate the binary image using the generate method of the RootImageGenerator class
