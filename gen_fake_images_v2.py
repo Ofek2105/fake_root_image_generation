@@ -134,24 +134,21 @@ class RootImageGenerator:
     return merged_image, root_image_bi, hairs_image_bi
 
 
-np.random.seed(0)
-# Usage example
-x = np.linspace(50, 200, 500)  # More main_root_points for a smoother curve
-y = 100 + np.sin(x / 50) * 20 + np.sin(x / 100) * 40  # Combination of sine waves
-y = 0 + 4 * x
+if __name__ == '__main__':
+  np.random.seed(0)
+  # Usage example
+  x = np.linspace(50, 200, 500)  # More main_root_points for a smoother curve
+  y = 100 + np.sin(x / 50) * 20 + np.sin(x / 100) * 40  # Combination of sine waves
+  y = 0 + 4 * x
 
-points = np.vstack((x, y)).T
+  points = np.vstack((x, y)).T
+  root_image_generator = RootImageGenerator(points)
+  binary_image, root_only, hairs_only = root_image_generator.generate()
 
-# Initialize the RootImageGenerator with the main_root_points and other desired parameters
-root_image_generator = RootImageGenerator(points)
-
-# Generate the binary image using the generate method of the RootImageGenerator class
-binary_image, root_only, hairs_only = root_image_generator.generate()
-
-# Display the generated image
-plt.figure(figsize=(8, 8))
-plt.imshow(binary_image, cmap='gray')
-plt.axis('off')
-plt.title('Binary Image of Filled Shape')
-plt.show()
+  # Display the generated image
+  plt.figure(figsize=(8, 8))
+  plt.imshow(binary_image, cmap='gray')
+  plt.axis('off')
+  plt.title('Binary Image of Filled Shape')
+  plt.show()
 
