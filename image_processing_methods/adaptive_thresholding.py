@@ -14,7 +14,7 @@ def adaptive_thresholding(img, block_size=3, sub_const=3, mode_='mean'):
 
 if __name__ == "__main__":
 
-  image = cv2.imread(r'res\type_3\arb_sr_x4.png')
+  image = cv2.imread(r'../res/type_3/arb_sr_x4.png')
   image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # grayscale
   block_size = [11, 13, 15]
   sub_th_consts = [7, 9, 11]

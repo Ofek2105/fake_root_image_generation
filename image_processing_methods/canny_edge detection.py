@@ -88,7 +88,7 @@ def draw_lines(image, lines):
 
 
 # image = cv2.imread(r'res\type_2\zoomIn.png')
-image = cv2.imread(r'res\type_3\arb_sr_x4.png')
+image = cv2.imread(r'../res/type_3/arb_sr_x4.png')
 
 # ========== canny - edge detection ==========
 edge_detected_canny = canny_edge_detection(image, 1)
