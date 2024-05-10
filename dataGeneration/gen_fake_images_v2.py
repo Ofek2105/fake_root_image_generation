@@ -5,16 +5,20 @@ from skimage.draw import line as draw_line
 from scipy.ndimage import binary_fill_holes
 from skimage.draw import polygon
 from typing import Tuple
+from dataGeneration.my_bezier_curve import draw_my_thick_bezier_curve
 
 
 class RootImageGenerator:
   def __init__(self, root_skele_points,
                root_width=5, root_width_std=1,
-               hair_length=50, hair_length_std=50,
+               hair_length=20, hair_length_std=20,
                hair_thickness=5, hair_thickness_std=1,
-               hair_craziness=3,
-               hair_n=100, img_width=1000, img_height=1000):
+               hair_craziness=0,
+               hair_n=100, img_width=300, img_height=300):
+
     self.points = root_skele_points
+    if len(self.points) < 2:
+      raise Exception("Cannot Generate Image with less than 2 points")
 
     self.root_width = root_width
     self.root_width_std = root_width_std
@@ -30,6 +34,7 @@ class RootImageGenerator:
     self.hair_n = hair_n
     self.img_width = img_width
     self.img_height = img_height
+
     self.normals, self.deltas = self.compute_normals()
 
   def compute_normals(self):
@@ -77,6 +82,13 @@ class RootImageGenerator:
     bin_img[rr, cc] = 1
 
   def draw_hairs(self, bin_image):
+    actual_root_count = 0
+    hairs_bboxes = []
+    hairs_polygons = []
+
+    if self.hair_n == 0:
+      return 0, [], []
+
     for i in range(0, len(self.points), max(1, len(self.points) // self.hair_n)):
       point = np.clip(self.points[i], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
       normal = self.normals[i]
@@ -86,8 +98,12 @@ class RootImageGenerator:
         normal = -normal
 
       hair_length = np.random.normal(self.hair_length, self.hair_length_std)
-      if hair_length < 0:
-        hair_length = -hair_length
+
+      if hair_length < self.root_width + self.root_width_std:
+        continue
+
+      if hair_length < self.root_width + 5 * self.root_width_std:  # to fix unusually large std
+        continue
 
       thickness = int(np.random.normal(self.hair_thickness, self.hair_thickness_std))
 
@@ -95,7 +111,14 @@ class RootImageGenerator:
       control_point = (point + cp_inc).astype(int)
       end_point = (point + normal * hair_length).astype(int)
 
-      self.draw_thick_bezier_curve(bin_image.T, point, delta, control_point, end_point, thickness, self.hair_craziness)
+      polygon_, bbox_ = draw_my_thick_bezier_curve(bin_image.T, point, delta,
+                                                     control_point,
+                                                     end_point, thickness, self.hair_craziness)
+      hairs_bboxes.append(bbox_)
+      hairs_polygons.append(polygon_)
+      actual_root_count += 1
+
+    return actual_root_count, hairs_polygons, hairs_bboxes
 
   def draw_thick_bezier_curve(self,
                               bin_image: np.ndarray,
@@ -115,9 +138,21 @@ class RootImageGenerator:
 
     rr, cc = bezier_curve(r0, c0, r1, c1, r2, c2, weight)
     rrb, ccb = bezier_curve(r0b, c0b, r1, c1, r2, c2, weight)
-    poly_rr, poly_cc = polygon(np.concatenate([rr, rrb[::-1]]), np.concatenate([cc, ccb[::-1]]))
+    poly_rr, poly_cc = np.concatenate([rr, rrb[::-1]]), np.concatenate([cc, ccb[::-1]])
+    poly_rr, poly_cc = polygon(poly_rr, poly_cc)
+    # poly_rr, poly_cc = polygon(np.concatenate([rr, rrb[::-1]]), np.concatenate([cc, ccb[::-1]]))
     valid = (poly_rr >= 0) & (poly_rr < self.img_height) & (poly_cc >= 0) & (poly_cc < self.img_width)
     bin_image[poly_rr[valid], poly_cc[valid]] = True
+
+    # Calculate bounding box
+    min_row, max_row = np.min(poly_rr[valid]), np.max(poly_rr[valid])
+    min_col, max_col = np.min(poly_cc[valid]), np.max(poly_cc[valid])
+    bbox = [min_col, min_row, max_col - min_col, max_row - min_row]
+
+    # Construct polygon points
+    polygon_points = [coord for pair in zip(poly_cc[valid], poly_rr[valid]) for coord in pair]
+
+    return polygon_points, bbox
 
   def generate(self):
     line1, line2 = self.generate_parallel_lines()
@@ -127,11 +162,19 @@ class RootImageGenerator:
     root_image_bi = binary_fill_holes(root_image_bi)
 
     hairs_image_bi = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
-    self.draw_hairs(hairs_image_bi)  # Draw hair-like lines randomly along the root
+
+    hair_num, hairs_poly, hairs_bbox = self.draw_hairs(hairs_image_bi)  # Draw hair-like lines randomly along the root
 
     merged_image = np.logical_or(root_image_bi, hairs_image_bi).astype(np.uint8)
-
-    return merged_image, root_image_bi, hairs_image_bi
+    output = {
+      "full image": merged_image,
+      "only roots": root_image_bi,
+      "only hairs": hairs_image_bi,
+      "hair count": hair_num,
+      "hairs polygons": hairs_poly,
+      "hairs bbox": hairs_bbox
+    }
+    return output
 
 
 if __name__ == '__main__':
@@ -139,16 +182,15 @@ if __name__ == '__main__':
   # Usage example
   x = np.linspace(50, 200, 500)  # More main_root_points for a smoother curve
   y = 100 + np.sin(x / 50) * 20 + np.sin(x / 100) * 40  # Combination of sine waves
-  y = 0 + 4 * x
+  # y = 0 + 1 * x
 
   points = np.vstack((x, y)).T
   root_image_generator = RootImageGenerator(points)
-  binary_image, root_only, hairs_only = root_image_generator.generate()
+  properties = root_image_generator.generate()
 
   # Display the generated image
   plt.figure(figsize=(8, 8))
-  plt.imshow(binary_image, cmap='gray')
+  plt.imshow(properties["full image"], cmap='gray')
   plt.axis('off')
-  plt.title('Binary Image of Filled Shape')
+  plt.title(f'Binary Image of Filled Shape\nHair Count {properties["hair count"]}')
   plt.show()
-

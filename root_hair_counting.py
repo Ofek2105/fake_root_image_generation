@@ -32,38 +32,40 @@ def get_largest_contur(bin_image_, plot_=False):
   return black_image
 
 
-def get_hairs_contours(binary_image, filename=None, plot_=False):
+def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count=""):
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=1)
 
   image_hairs_highlight = draw_overlay_on_canvas(binary_image, hairs_dilated)
   hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-  if plot_:
+  if plot_ or filename:
     fig, ax = plt.subplots(1, 3, figsize=(45, 15))
     font_size = 50
 
     ax[0].imshow(binary_image, cmap='gray')
-    ax[0].set_title('Base Binary image', fontsize=font_size)
+    if truth_count != "":
+      truth_count = f'hair count={truth_count}'
+    ax[0].set_title(f'Base Binary image {truth_count}', fontsize=font_size)
 
     ax[1].imshow(hairs_dilated, cmap='gray')
     ax[1].set_title('Found Hair Tips', fontsize=font_size)
 
     ax[2].imshow(image_hairs_highlight)
-    ax[2].set_title(f'SR (our method) Num = {len(hairs_contours)}', fontsize=font_size)
+    ax[2].set_title(f'predicted hair count = {len(hairs_contours)}', fontsize=font_size)
     plt.axis('off')
+
+
+  if filename is not None:
+  # file2 = rf'TEST DATA\results\lr\lr_bell.png'
+  #   cv2.imwrite(filename, binary_image)
+    plt.savefig(filename)
     plt.show()
-
-  # if filename is not None:
-  file2 = rf'TEST DATA\results\lr\lr_bell.png'
-  # cv2.imwrite(file1, binary_image)
-  plt.imshow(image_hairs_highlight)
-  # plt.title(f'SR (our method) {filename.split(" ")[-1]} Num = {len(hairs_contours)}', fontsize=25)
-  plt.title(f'Bell Pepper Num = {len(hairs_contours)}')
-  plt.axis('off')
-  plt.savefig(file2)
+  # plt.imshow(image_hairs_highlight)
+  # # plt.title(f'SR (our method) {filename.split(" ")[-1]} Num = {len(hairs_contours)}', fontsize=25)
+  # plt.title(f'Bell Pepper Num = {len(hairs_contours)}')
+  # plt.axis('off')
   # cv2.imwrite(file2, image_hairs_highlight)
-
   return hairs_contours
 
 
