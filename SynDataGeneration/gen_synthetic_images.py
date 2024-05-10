@@ -5,7 +5,7 @@ from skimage.draw import line as draw_line
 from scipy.ndimage import binary_fill_holes
 from skimage.draw import polygon
 from typing import Tuple
-from dataGeneration.my_bezier_curve import draw_my_thick_bezier_curve
+from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve
 
 
 class RootImageGenerator:

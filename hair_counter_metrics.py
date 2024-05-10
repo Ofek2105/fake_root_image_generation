@@ -1,11 +1,10 @@
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 
-from root_hair_counting import get_hairs_contours
-from generate_main_root_points import generator_main_roots
-from dataGeneration.gen_fake_images_v2 import RootImageGenerator
+from image_processing_methods.root_hair_counting import get_hairs_contours
+from SynDataGeneration.gen_main_root_points import generator_main_roots
+from SynDataGeneration.gen_synthetic_images import RootImageGenerator
 
 
 def calculate_metrics(predictions, ground_truth, smoothing_constant=1e-8):

@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from coco_json_initialization import CocoDataset
-from generate_main_root_points import generator_main_roots
-from dataGeneration.gen_fake_images_v2 import RootImageGenerator
+from SynDataGeneration.gen_main_root_points import generator_main_roots
+from SynDataGeneration.gen_synthetic_images import RootImageGenerator
 """
 
       "full image": merged_image,

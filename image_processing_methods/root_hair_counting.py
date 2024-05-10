@@ -169,7 +169,7 @@ def get_image_hair_count(image_path, plot_report=False):
 
 
 if __name__ == '__main__':
-  full_path = r'TEST DATA/base/bell_lr.jpg'
+  full_path = r'../TEST DATA/base/bell_lr.jpg'
   n_hairs = get_image_hair_count(full_path, plot_report=True)
   print(n_hairs)
 
