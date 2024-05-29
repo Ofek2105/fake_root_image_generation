@@ -35,7 +35,7 @@ blended_image = cv2.addWeighted(shifted_image, 1, sobel_edges_display, -0.5, 0)
 #
 # # Plot the histogram
 # plt.figure()
-# plt.plot(histogram, color='black')
+# plt.plot_(histogram, color='black')
 # plt.xlabel('Grayscale Value')
 # plt.ylabel('Magnitude')
 # plt.title('Histogram of Shifted Grayscale Image')

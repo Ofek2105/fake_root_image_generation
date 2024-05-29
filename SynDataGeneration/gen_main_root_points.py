@@ -89,53 +89,7 @@ def is_in_rect(x_coords, y_coords, rect_):
   return False
 
 
-def smooth_random_walk(start_point, rect_in_start, rect_in_end, stop_chance=-1, step_size=1,
-                       momentum=0.5, steps=200, direction_variance=10):
-  # Initialize starting coordinates and calculate initial direction
-  x, y = start_point
-  initial_direction = calculate_direction(start_point, rect_in_start, rect_in_end)
-  direction = np.radians(initial_direction)  # Convert to radians for calculations
-
-  # Store the coordinates in lists for plotting or further analysis
-  x_coords, y_coords = [x], [y]
-
-  for _ in range(steps):
-    if np.random.rand() < stop_chance:
-      break  # Stop the growth with a certain probability
-
-    # Introduce noise in the direction, influenced by 'momentum'
-    noise = np.random.normal(scale=direction_variance)
-    direction = momentum * direction + (1 - momentum) * np.radians(noise)
-
-    x_step = step_size * np.cos(direction)
-    y_step = step_size * np.sin(direction)
-
-    # Normalize the step to ensure consistent distance
-    step_norm = np.sqrt(x_step ** 2 + y_step ** 2)
-    x_step = (x_step / step_norm) * step_size
-    y_step = (y_step / step_norm) * step_size
-
-    x += x_step
-    y += y_step
-
-    if x <= rect_in_start[0] or x >= rect_in_end[0] or y <= rect_in_start[1] or y >= rect_in_end[1]:
-      break
-
-    # Append new position to lists
-    x_coords.append(x)
-    y_coords.append(y)
-
-  return x_coords, y_coords
-
-
-def generate_single_main_root(rect_out_, rect_in_):
-  points = generate_annular_init_points(2, rect_out_, rect_in_)
-  x_coords, y_coords = random_walk_line(points[0], rect_out_, rect_in_)
-  points = np.vstack((x_coords, y_coords)).T
-  return points
-
-
-def generator_main_roots(N, rect_out, rect_in):
+def generator_main_roots(N, minimum_length=50):
   """
   a generator that yields points. each is resembling a main root
   :param N: number of roots to generate
@@ -146,10 +100,17 @@ def generator_main_roots(N, rect_out, rect_in):
   :return: yields points
   """
 
-  init_points = generate_annular_init_points(N, rect_out, rect_in)
+  rect_out_ = (50, 50, 250, 250)
+  delt = 20
+  rect_in_ = (rect_out_[0] + delt, rect_out_[1] + delt, rect_out_[2] - delt, rect_out_[3] - delt)
+
+  init_points = generate_annular_init_points(N, rect_out_, rect_in_)
   for init_point in init_points:
-    x_coords, y_coords = random_walk_line(init_point, rect_out, rect_in)
+    x_coords, y_coords = random_walk_line(init_point, rect_out_, rect_in_)
     root_points = np.vstack((x_coords, y_coords)).T
+    if len(root_points) < minimum_length:
+      # print("redo main root")
+      continue
     yield root_points
 
 
@@ -157,7 +118,8 @@ if __name__ == "__main__":
   rect_out = (20, 20, 80, 80)
   rect_in = (40, 40, 60, 60)
 
-  points = generate_single_main_root(rect_out, rect_in)
-  print(points.shape)
-  plt.scatter(points[:, 0], points[:, 1])
-  plt.show()
+  for main_root_points in generator_main_roots(5):
+    print(main_root_points.shape)
+    plt.scatter(main_root_points[:, 0], main_root_points[:, 1])
+    plt.show()
+    break

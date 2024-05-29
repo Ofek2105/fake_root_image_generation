@@ -1,72 +1,203 @@
-import matplotlib.pyplot as plt
+import os
 import numpy as np
+from PIL import Image
 
 from SynDataGeneration.gen_main_root_points import generator_main_roots
-from SynDataGeneration.gen_synthetic_images import RootImageGenerator
-"""
-
-      "full image": merged_image,
-      "only roots": root_image_bi,
-      "only hairs": hairs_image_bi,
-      "hair count": hair_num,
-      "hairs polygons": hairs_poly,
-      "hairs bbox": hairs_bbox
-      
-      
-"""
-np.random.seed(21)
-
-rect_out = (50, 50, 250, 250)
-delt = 20
-rect_in = (rect_out[0] + delt, rect_out[1] + delt, rect_out[2] - delt, rect_out[3] - delt)
+from SynDataGeneration.gen_synthetic_images import RootImageGenerator, plot_bin_root_hairs
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from coco_json_initialization import CocoDataset
+import itertools
+from tqdm import tqdm
 
 
-N = 5
-params = {
-    "root_width": 5,
-    "root_width_std": 1,
-    "hair_length": 30,
-    "hair_length_std": 10,
-    "hair_thickness": 1,
-    "hair_thickness_std": 0,
-    "hair_craziness": 1,
-    "hair_n": 50,
-    "img_width": 300,
-    "img_height": 300
-}
-hair_density = 0.08
+def save_binary_image(binary_image, base_path, params, image_id):
+  if not os.path.exists(base_path):
+    os.makedirs(base_path)
+
+  # Constructing the filename
+  file_name = (f"rw{params['root_width']}_rs{params['root_width_std']}_hl{params['hair_length']}"
+               f"_ls{params['hair_length_std']}_ht{params['hair_thickness']}_ts{params['hair_thickness_std']}"
+               f"_hc{params['hair_craziness']}_hd{params['hair_density']}_w{params['img_width']}"
+               f"_h{params['img_height']}_{image_id}.png")
+
+  file_path = os.path.join(base_path, file_name)
+
+  image = Image.fromarray((binary_image * 255).astype(np.uint8))
+  image.save(file_path)
+
+  return file_path
 
 
-for main_root_points in generator_main_roots(N, rect_out, rect_in):
-  root_length = len(main_root_points)
-  params["hair_n"] = int(root_length * hair_density)
-  root_image_class = RootImageGenerator(main_root_points, **params)
-  properties = root_image_class.generate()
+def plot_with_annotations(properties):
+  # Retrieve the full image and other necessary details from properties
+  full_image = properties["full image"]
+  hairs_polygons = properties["hairs polygons"]
+  hairs_bbox = properties["hairs bbox"]
+  root_bbox = properties["Main root bbox"]
+  root_polygon = properties["Main root polygon"]
+  font_size_ = 115
+  linewidth_poly = 8
+  linewidth_bbox = 5
 
-  # plt.imshow(properties["full image"], cmap='gray')
-  # plt.axis('off')
-  # plt.title('Bin image')
-  # #
-  fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-  fig.suptitle(f'{properties["hair count"]} hairs')
+  # Create a figure and a subplot
+  fig, ax = plt.subplots(1, 2, figsize=(60, 30))
+  ax[0].imshow(full_image, cmap='gray')
+  ax[1].imshow(full_image, cmap='gray')
+  ax[0].set_title("Synthetic root", size=font_size_)
+  ax[1].set_title("Annotated Synthetic root", size=font_size_)
 
-  axes[0].imshow(properties["full image"], cmap='gray')
-  axes[0].axis('off')
-  axes[0].set_title('Bin image')
+  root_poly_points = np.array(root_polygon).reshape(-1, 2)
+  ax[1].plot(root_poly_points[:, 0], root_poly_points[:, 1], 'g-',
+             linewidth=linewidth_poly, label='Main Root polygon')
 
-  axes[1].imshow(properties["only roots"], cmap='gray')
-  axes[1].axis('off')
-  axes[1].set_title('root only')
+  rect = patches.Rectangle((root_bbox[0], root_bbox[1]), root_bbox[2], root_bbox[3],
+                           linewidth=linewidth_bbox, edgecolor='purple',
+                           facecolor='none', label='Main Root BBox')
+  ax[1].add_patch(rect)
 
-  axes[2].imshow(properties["only hairs"], cmap='gray')
-  axes[2].axis('off')
-  axes[2].set_title('hair only')
+  # Plot bounding boxes for hairs
+  for bbox in hairs_bbox:
+    rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3],
+                             linewidth=linewidth_bbox, edgecolor='r', facecolor='none')
+    ax[1].add_patch(rect)
 
+  # Plot polygons for hairs (each polygon is a sequence of x, y coordinates)
+  for polygon in hairs_polygons:
+    poly_points = np.array(polygon).reshape(-1, 2)
+    ax[1].plot(poly_points[:, 0], poly_points[:, 1], color='blue',
+               linewidth=3)
+
+  ax[0].set_axis_off()
+  ax[1].set_axis_off()
   plt.show()
 
-# coco_gen = CocoDataset()
-#
-# coco_gen.add_category(category_id=1, name="root", supercategory="plant")
-# coco_gen.add_category(category_id=2, name="hair", supercategory="plant")
-#
-# coco_gen.save_to_file('coco_format.json')
+
+def add_annotations_to_coco(coco_dataset, image_id, properties):
+  root_bbox = [int(coord) for coord in properties["Main root bbox"]]
+  root_polygon = [int(coord) for coord in properties["Main root polygon"]]
+  coco_dataset.add_annotation(
+    image_id=image_id,
+    category_id=1,  # Assuming category_id for root is 1
+    bbox=root_bbox,
+    segmentation=[root_polygon]
+  )
+
+  hairs_bbox = [list(map(int, bbox)) for bbox in properties["hairs bbox"]]
+  hairs_polygons = [list(map(int, polygon)) for polygon in properties["hairs polygons"]]
+  for bbox, polygon in zip(hairs_bbox, hairs_polygons):
+    coco_dataset.add_annotation(
+      image_id=image_id,
+      category_id=2,  # Assuming category_id for hair is 2
+      bbox=bbox,
+      segmentation=[polygon]
+    )
+
+
+def annotate_specific_params(coco, images_per_root, n_unique_roots, params):
+  param_id = 0
+  for main_root_points in generator_main_roots(n_unique_roots):
+    root_image_class = RootImageGenerator(main_root_points, **params)
+
+    for id in range(images_per_root):
+      properties = root_image_class.generate()
+      full_path = save_binary_image(properties["full image"], "dataset\\images", params, param_id)
+      im_id = coco.add_image(file_path=full_path, width=params["img_width"], height=params["img_height"])
+      add_annotations_to_coco(coco, im_id, properties)
+      param_id += 1
+
+
+def generator_combination_dict(possibilities_dict):
+  keys = []
+  values = []
+
+  for key, value in possibilities_dict.items():
+    if isinstance(value, list):
+      keys.append(key)
+      values.append(value)
+
+  for combination in itertools.product(*values):
+    params = {}
+    for key, value in possibilities_dict.items():
+      if key in keys:
+        index = keys.index(key)
+        params[key] = combination[index]
+      else:
+        params[key] = value
+    yield params
+
+
+def count_iterations(possibilities_dict):
+  iterations = 1
+  for key, value in possibilities_dict.items():
+    if isinstance(value, list):
+      iterations *= len(value)
+  return iterations
+
+
+def run_(all_params, seed=None, plot=False):
+  anno_per_root = 3
+  roots_per_anno = 3
+  iteration_num = count_iterations(all_params)
+
+  coco = CocoDataset()
+  coco.add_category(category_id=1, name="hair", supercategory="plant")
+  coco.add_category(category_id=2, name="root", supercategory="plant")
+
+  for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
+    annotate_specific_params(coco, images_per_root=anno_per_root,
+                             n_unique_roots=roots_per_anno, params=params)
+  coco.save_to_file('coco_format.json')
+
+
+def main():
+  np.random.seed(21)
+  N = 5
+
+  params = {
+    "root_width": 10,
+    "root_width_std": 0,
+    "hair_length": 80,
+    "hair_length_std": 10,
+    "hair_thickness": 1,
+    "hair_thickness_std": 1,
+    "hair_craziness": 1,  # 0 or 1
+    "hair_density": 0.05,
+    "img_width": 300,
+    "img_height": 300
+  }
+
+  for main_root_points in generator_main_roots(N):
+    root_image_class = RootImageGenerator(main_root_points, **params)
+    properties = root_image_class.generate()
+    plot_with_annotations(properties)
+
+
+if __name__ == '__main__':
+  possibilities = {
+    "root_width": [2, 4, 7, 10, 15],
+    "root_width_std": [0, 1],
+    "hair_length": [10, 20, 30, 50, 80],
+    "hair_length_std": [10, 20, 30],
+    "hair_thickness": [1, 3],
+    "hair_thickness_std": [0, 1],
+    "hair_craziness": [0, 0, 0, 1],
+    "hair_density": [0.01, 0.1, 0.3, 0.3, 0.2, 0.5, 1, 2],
+    "img_width": 300,
+    "img_height": 300
+  }
+
+  # params = {
+  #   "root_width": 10,
+  #   "root_width_std": 0,
+  #   "hair_length": 80,
+  #   "hair_length_std": 10,
+  #   "hair_thickness": 1,
+  #   "hair_thickness_std": 1,
+  #   "hair_craziness": 1,  # 0 or 1
+  #   "hair_density": 0.05,
+  #   "img_width": 300,
+  #   "img_height": 300
+  # }
+  # main()
+  run_(possibilities)

@@ -1,10 +1,38 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import os
-import time
 
 RIGHT_TAIL_THRESHOLD = 0.75
+
+
+def plot_histogram_with_thresholds(image_path, our_threshold, otsu_threshold):
+
+  image = cv2.imread(image_path)
+  if image is None:
+    print("Image not found or unable to read.")
+    return
+
+  gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+  hist = cv2.calcHist([gray_image], [0], None, [256], [0, 256])
+  hist = hist.ravel() / hist.max()  # Normalize histogram
+
+  plt.figure(figsize=(10, 5))
+  plt.plot(hist, color='gray')
+  plt.fill_between(range(256), hist, color='gray', alpha=0.5)
+
+  plt.axvline(x=our_threshold, color='blue', label=f'Our Threshold: {our_threshold}')
+  plt.text(our_threshold, plt.ylim()[1] * 0.8, 'Our Threshold', rotation=90, color='blue', verticalalignment='center')
+  plt.axvline(x=otsu_threshold, color='red', label=f'OTSU Threshold: {otsu_threshold}')
+  plt.text(otsu_threshold, plt.ylim()[1] * 0.6, 'OTSU Threshold', rotation=90, color='red', verticalalignment='center')
+
+  # Enhancing the plot
+  plt.xlabel('Pixel Intensity')
+  plt.ylabel('Normalized Counts')
+  plt.title('Histogram with Thresholds')
+  plt.legend()
+  plt.grid(True)
+  plt.show()
 
 
 def img_intensity_range(img, bins, plot=False):
@@ -32,7 +60,7 @@ def get_largest_contur(bin_image_, plot_=False):
   return black_image
 
 
-def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count=""):
+def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="", suptitle_=None):
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=1)
 
@@ -42,6 +70,8 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="")
   if plot_ or filename:
     fig, ax = plt.subplots(1, 3, figsize=(45, 15))
     font_size = 50
+    if suptitle_ is not None:
+      fig.suptitle(f'{suptitle_}', fontsize=font_size)
 
     ax[0].imshow(binary_image, cmap='gray')
     if truth_count != "":
@@ -55,17 +85,12 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="")
     ax[2].set_title(f'predicted hair count = {len(hairs_contours)}', fontsize=font_size)
     plt.axis('off')
 
-
   if filename is not None:
-  # file2 = rf'TEST DATA\results\lr\lr_bell.png'
-  #   cv2.imwrite(filename, binary_image)
     plt.savefig(filename)
+
+  if plot_:
     plt.show()
-  # plt.imshow(image_hairs_highlight)
-  # # plt.title(f'SR (our method) {filename.split(" ")[-1]} Num = {len(hairs_contours)}', fontsize=25)
-  # plt.title(f'Bell Pepper Num = {len(hairs_contours)}')
-  # plt.axis('off')
-  # cv2.imwrite(file2, image_hairs_highlight)
+
   return hairs_contours
 
 
@@ -109,8 +134,8 @@ def find_right_tail_threshold(img, plot_=False):
     for j in range(pos, 255):
       bar_list[j].set_color('red')
     plt.xlim([-0.5, 255.5])
-    plt.text(peak_x + 2, y_text, f'Peak\n100%', fontsize=10, bbox=dict(facecolor='red', alpha=0.8))
-    plt.text(peak_x + i + 2, y_text, f'{int((1 - RIGHT_TAIL_THRESHOLD) * 100)}%', fontsize=10,
+    plt.text(peak_x + 2, y_text, f'Peak\n', fontsize=10, bbox=dict(facecolor='red', alpha=0.8))
+    plt.text(peak_x + i + 2, y_text + 300, f'{int((1 - RIGHT_TAIL_THRESHOLD) * 100)}% sum\nfrom peak', fontsize=10,
              bbox=dict(facecolor='red', alpha=0.8))
 
     plt.axvline(x=pos, color='k', linestyle='-', label=f'x={pos}')
@@ -133,11 +158,24 @@ def draw_contours(original_image, contours_, color=None, plot_=False):
   return original_image
 
 
-def get_root_and_hairs_mask(image, plot_report):
-  x_pos = find_right_tail_threshold(image, plot_=plot_report)
+def get_root_and_hairs_mask_OG(image, plot_report_):
+  x_pos = find_right_tail_threshold(image, plot_=plot_report_)
+  print(x_pos)
   chosen_range = (int(x_pos), 255)
-  bin_image = img_intensity_range(image, chosen_range, plot=plot_report)
-  root_image = get_largest_contur(bin_image, plot_report)
+  bin_image = img_intensity_range(image, chosen_range, plot=plot_report_)
+  root_image = get_largest_contur(bin_image, plot_report_)
+  return root_image
+
+
+def get_root_and_hairs_mask_OTSU(image, plot_report, blur_=None):
+  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+  if blur_ is not None:
+    gray = cv2.GaussianBlur(gray, (blur_[0], blur_[1]), blur_[2])
+
+  value, binary_image = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+  print(value)
+  root_image = get_largest_contur(binary_image, plot_report)
   return root_image
 
 
@@ -153,15 +191,17 @@ def save_plot(image, title, path):
   plt.savefig(path)
 
 
-def get_image_hair_count(image_path, plot_report=False):
+def get_image_hair_count(image_path, plot_report=False, blur=None):
   # save_path = r'TEST DATA/results/lr/lr_bell.png'
   # file_title = get_title(image_path)
+  sup_tit = ""
+  if blur is not None:
+    sup_tit = f'OSTU algo blur kernal ({blur[0]}, {blur[1]}) sigma {blur[2]}'
   image = cv2.imread(image_path)
-  root_bin_image = get_root_and_hairs_mask(image, plot_report)
-  hair_contours = get_hairs_contours(root_bin_image, filename=None, plot_=plot_report)
+  root_bin_image = get_root_and_hairs_mask_OG(image, True)
+  hair_contours = get_hairs_contours(root_bin_image, filename=None, plot_=plot_report, suptitle_=sup_tit)
   hair_num = len(hair_contours)
-
-  original_image_with_contours = draw_contours(image, hair_contours, plot_report)
+  # original_image_with_contours = draw_contours(image, hair_contours, plot_report)
   # bin_image_with_contours = draw_contours(root_bin_image, hair_contours, (0, 255, 0), plot_report)
 
   # save_plot(bin_image_with_contours, f'Bell Pepper Num = {hair_num}', save_path)
@@ -169,9 +209,20 @@ def get_image_hair_count(image_path, plot_report=False):
 
 
 if __name__ == '__main__':
-  full_path = r'../TEST DATA/base/bell_lr.jpg'
-  n_hairs = get_image_hair_count(full_path, plot_report=True)
-  print(n_hairs)
+  image_paths = [r'../TEST DATA/base/arb_lr.png',
+                 r'../TEST DATA/base/bell_lr.jpg']
+
+  # plot_histogram_with_thresholds(image_paths[0], our_threshold=147, otsu_threshold=127)
+  # plot_histogram_with_thresholds(image_paths[1], our_threshold=102, otsu_threshold=88)
+
+
+  # blur_props = [None, (3, 3, 0), (5, 5, 0), (11, 11, 0)]
+  # blur_props = [None]
+  # for image_path in image_paths:
+#   for blur_prop in blur_props:
+  n_hairs = get_image_hair_count(image_paths[0], plot_report=True)
+  n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
+
 
   # base_path = r'TEST DATA\\ARBIDIOPSIS'
   # for file_name in os.listdir(base_path):

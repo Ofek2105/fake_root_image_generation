@@ -1,27 +1,42 @@
 import json
+import os
+from datetime import datetime
 
 
 class CocoDataset:
-  def __init__(self):
+  def __init__(self, info=None, licenses=None):
     self.dataset = {
-      "info": {},
-      "licenses": [],
+      "info": info if info else {
+        "year": datetime.now().year,
+        "version": "1.0",
+        "description": "COCO Format Dataset",
+        "contributor": "",
+        "url": "",
+        "date_created": datetime.now().strftime("%Y-%m-%d")
+      },
+      "licenses": licenses if licenses else [],
       "images": [],
       "annotations": [],
       "categories": []
     }
+    self.image_counter = 0
+    self.annotation_counter = 0
 
-  def add_image(self, image_id, file_name, width, height):
+  def add_image(self, file_path, width, height):
+    self.image_counter += 1
+    file_name = os.path.basename(file_path)
     self.dataset['images'].append({
-      "id": image_id,
+      "id": self.image_counter,
       "file_name": file_name,
       "width": width,
       "height": height
     })
+    return self.image_counter
 
-  def add_annotation(self, anno_id, image_id, category_id, bbox, segmentation):
+  def add_annotation(self, image_id, category_id, bbox, segmentation):
+    self.annotation_counter += 1
     self.dataset['annotations'].append({
-      "id": anno_id,
+      "id": self.annotation_counter,
       "image_id": image_id,
       "category_id": category_id,
       "bbox": bbox,  # [x, y, width, height]
@@ -43,10 +58,20 @@ class CocoDataset:
 
 
 if __name__ == '__main__':
-  # Usage example
   coco = CocoDataset()
-  coco.add_image(image_id=1, file_name="00000001.jpg", width=1024, height=768)
-  coco.add_annotation(anno_id=1, image_id=1, category_id=1, bbox=[100, 200, 50, 80],
-                      segmentation=[[110, 200, 150, 200, 150, 280, 110, 280]])
   coco.add_category(category_id=1, name="root_hair", supercategory="plant")
+  image_id = coco.add_image(file_path="path/to/image/00000001.jpg", width=1024, height=768)
+
+  segmentations = [
+    [[110, 200, 150, 200, 150, 280, 110, 280]],
+    [[120, 210, 160, 210, 160, 290, 120, 290]],
+    # Add more segmentations here
+  ]
+
+  bbox = [100, 200, 50, 80]  # Assuming the same bbox for simplicity
+  category_id = 1
+
+  for segmentation in segmentations:
+    coco.add_annotation(image_id=image_id, category_id=category_id, bbox=bbox, segmentation=segmentation)
+
   coco.save_to_file('coco_format.json')
