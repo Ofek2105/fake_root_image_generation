@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.draw import line as draw_line
+from skimage.transform import resize
 from scipy.ndimage import binary_fill_holes
 from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve, draw_single_root_end
 from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
@@ -169,7 +170,7 @@ class RootImageGenerator:
     draw_single_root_end(self.root_image_bi, start1, start2, start_root_dir, thickness_=self.root_width)
     draw_single_root_end(self.root_image_bi, end1, end2, end_root_dir, thickness_=self.root_width)
 
-  def generate(self):
+  def generate(self, new_shape=None):
     line1, line2 = self.generate_parallel_lines()
 
     self.draw_lines_connections(line1, line2)
@@ -183,6 +184,12 @@ class RootImageGenerator:
     hair_num, hairs_poly, hairs_bbox = self.draw_hairs(hairs_image_bi)
 
     merged_image = np.logical_or(self.root_image_bi, hairs_image_bi).astype(np.uint8)
+
+    if new_shape is not None:
+      merged_image = resize(merged_image, new_shape)
+      self.root_image_bi = resize(merged_image, new_shape)
+      hairs_image_bi = resize(hairs_image_bi, new_shape)
+
     output = {
       "full image": merged_image,
       "only roots": self.root_image_bi,
