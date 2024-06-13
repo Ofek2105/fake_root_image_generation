@@ -29,6 +29,22 @@ def save_binary_image(binary_image, base_path, params, image_id):
   return file_path
 
 
+def scale_up_bbox(bbox, original_shape):
+  x, y, w, h = bbox
+  x = int(np.round(x * original_shape[0]))
+  y = int(np.round(y * original_shape[1]))
+  w = int(np.round(w * original_shape[0]))
+  h = int(np.round(h * original_shape[1]))
+  return [x, y, w, h]
+
+
+def scale_up_polygon(polygon, original_shape):
+  root_poly_points = np.array(polygon).reshape(-1, 2)
+  root_poly_points[:, 0] = np.round(root_poly_points[:, 0] * original_shape[0])
+  root_poly_points[:, 1] = np.round(root_poly_points[:, 1] * original_shape[1])
+  return root_poly_points.astype(int)
+
+
 def plot_with_annotations(properties):
   # Retrieve the full image and other necessary details from properties
   full_image = properties["full image"]
@@ -47,10 +63,11 @@ def plot_with_annotations(properties):
   ax[0].set_title("Synthetic root", size=font_size_)
   ax[1].set_title("Annotated Synthetic root", size=font_size_)
 
-  root_poly_points = np.array(root_polygon).reshape(-1, 2)
+  root_poly_points = scale_up_polygon(root_polygon, full_image.shape)
   ax[1].plot(root_poly_points[:, 0], root_poly_points[:, 1], 'g-',
              linewidth=linewidth_poly, label='Main Root polygon')
 
+  root_bbox = scale_up_bbox(root_bbox, full_image.shape)
   rect = patches.Rectangle((root_bbox[0], root_bbox[1]), root_bbox[2], root_bbox[3],
                            linewidth=linewidth_bbox, edgecolor='purple',
                            facecolor='none', label='Main Root BBox')
@@ -58,13 +75,14 @@ def plot_with_annotations(properties):
 
   # Plot bounding boxes for hairs
   for bbox in hairs_bbox:
-    rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3],
+    hair_bbox = scale_up_bbox(bbox, full_image.shape)
+    rect = patches.Rectangle((hair_bbox[0], hair_bbox[1]), hair_bbox[2], hair_bbox[3],
                              linewidth=linewidth_bbox, edgecolor='r', facecolor='none')
     ax[1].add_patch(rect)
 
   # Plot polygons for hairs (each polygon is a sequence of x, y coordinates)
   for polygon in hairs_polygons:
-    poly_points = np.array(polygon).reshape(-1, 2)
+    poly_points = scale_up_polygon(polygon, full_image.shape)
     ax[1].plot(poly_points[:, 0], poly_points[:, 1], color='blue',
                linewidth=3)
 
@@ -99,7 +117,7 @@ def annotate_specific_params(coco, images_per_root, n_unique_roots, params):
   for main_root_points in generator_main_roots(n_unique_roots):
     root_image_class = RootImageGenerator(main_root_points, **params)
 
-    for id in range(images_per_root):
+    for _ in range(images_per_root):
       properties = root_image_class.generate()
       full_path = save_binary_image(properties["full image"], "dataset\\images", params, param_id)
       im_id = coco.add_image(file_path=full_path, width=params["img_width"], height=params["img_height"])
@@ -169,7 +187,7 @@ def main():
 
   for main_root_points in generator_main_roots(N):
     root_image_class = RootImageGenerator(main_root_points, **params)
-    properties = root_image_class.generate()
+    properties = root_image_class.generate(new_shape=(600, 600))
     plot_with_annotations(properties)
 
 
@@ -199,5 +217,5 @@ if __name__ == '__main__':
   #   "img_width": 300,
   #   "img_height": 300
   # }
-  # main()
-  run_(possibilities)
+  main()
+  # run_(possibilities)
