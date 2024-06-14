@@ -33,15 +33,15 @@ class CocoDataset:
     })
     return self.image_counter
 
-  def add_annotation(self, image_id, category_id, bbox, segmentation):
+  def add_annotation(self, image_id, category_id, bbox, segmentation, area):
     self.annotation_counter += 1
     self.dataset['annotations'].append({
       "id": self.annotation_counter,
       "image_id": image_id,
       "category_id": category_id,
-      "bbox": bbox,  # [x, y, width, height]
-      "segmentation": segmentation,  # [[x1, y1, x2, y2, ..., xn, yn]]
-      "area": bbox[2] * bbox[3],  # width * height
+      "bbox": str(bbox),  # [x, y, width, height]
+      "segmentation": str(segmentation),  # [[x1, y1, x2, y2, ..., xn, yn]]
+      "area": str(area),
       "iscrowd": 0
     })
 
