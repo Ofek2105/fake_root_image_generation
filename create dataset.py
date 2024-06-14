@@ -9,6 +9,8 @@ import matplotlib.patches as patches
 from coco_json_initialization import CocoDataset
 import itertools
 from tqdm import tqdm
+from fiftyone_dataset import FiftyOneManager
+from shapely.geometry import Polygon
 
 
 def save_binary_image(binary_image, base_path, params, image_id):
@@ -27,6 +29,17 @@ def save_binary_image(binary_image, base_path, params, image_id):
   image.save(file_path)
 
   return file_path
+
+
+def calculate_polygon_area(coords, image_shape):
+  if len(coords) < 6:  # Not a polygon
+    return 0
+
+  # Convert the flat list of coordinates to a list of (x, y) tuples
+  points = [(coords[i], coords[i + 1]) for i in range(0, len(coords), 2)]
+  polygon = Polygon(points)
+  normalized_area = polygon.area
+  return normalized_area * image_shape[0] * image_shape[1]
 
 
 def scale_up_bbox(bbox, original_shape):
@@ -92,23 +105,22 @@ def plot_with_annotations(properties):
 
 
 def add_annotations_to_coco(coco_dataset, image_id, properties):
-  root_bbox = [int(coord) for coord in properties["Main root bbox"]]
-  root_polygon = [int(coord) for coord in properties["Main root polygon"]]
+
   coco_dataset.add_annotation(
     image_id=image_id,
     category_id=1,  # Assuming category_id for root is 1
-    bbox=root_bbox,
-    segmentation=[root_polygon]
+    bbox=properties["Main root bbox"],
+    segmentation=properties["Main root polygon"],
+    area=calculate_polygon_area(properties["Main root polygon"], image_shape=properties["full image"].shape)
   )
 
-  hairs_bbox = [list(map(int, bbox)) for bbox in properties["hairs bbox"]]
-  hairs_polygons = [list(map(int, polygon)) for polygon in properties["hairs polygons"]]
-  for bbox, polygon in zip(hairs_bbox, hairs_polygons):
+  for i in range(properties["hair count"]):
     coco_dataset.add_annotation(
       image_id=image_id,
-      category_id=2,  # Assuming category_id for hair is 2
-      bbox=bbox,
-      segmentation=[polygon]
+      category_id=0,  # Assuming category_id for hair is 0
+      bbox=properties["hairs bbox"][i],
+      segmentation=[properties["hairs polygons"][i]],
+      area=calculate_polygon_area(properties["hairs polygons"][i], image_shape=properties["full image"].shape)
     )
 
 
@@ -159,8 +171,8 @@ def run_(all_params, seed=None, plot=False):
   iteration_num = count_iterations(all_params)
 
   coco = CocoDataset()
-  coco.add_category(category_id=1, name="hair", supercategory="plant")
-  coco.add_category(category_id=2, name="root", supercategory="plant")
+  coco.add_category(category_id=0, name="hair", supercategory="plant")
+  coco.add_category(category_id=1, name="root", supercategory="plant")
 
   for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
     annotate_specific_params(coco, images_per_root=anno_per_root,
@@ -168,18 +180,47 @@ def run_(all_params, seed=None, plot=False):
   coco.save_to_file('coco_format.json')
 
 
+def annotate_specific_params_51(coco, images_per_root, n_unique_roots, params):
+  param_id = 0
+  for main_root_points in generator_main_roots(n_unique_roots):
+    root_image_class = RootImageGenerator(main_root_points, **params)
+
+    for _ in range(images_per_root):
+      properties = root_image_class.generate()
+      full_path = save_binary_image(properties["full image"], "dataset\\images", params, param_id)
+      im_id = coco.add_image(full_path)
+      coco.add_polygon_annotation(im_id, "main-root", properties["Main root polygon"], properties["Main root bbox"])
+      coco.add_polygon_annotation(im_id, "hair", properties["hairs polygons"], properties["hairs bbox"])
+
+      param_id += 1
+
+
+def run_51(all_params, seed=None, plot=False):
+  anno_per_root = 3
+  roots_per_anno = 3
+  iteration_num = count_iterations(all_params)
+
+  coco = FiftyOneManager("root-hair-dataset")
+
+  for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
+    annotate_specific_params_51(coco, images_per_root=anno_per_root,
+                                n_unique_roots=roots_per_anno, params=params)
+  coco.export_to_coco("dataset/coco.json")
+  coco.view_dataset()
+
+
 def main():
   np.random.seed(21)
   N = 5
 
   params = {
-    "root_width": 10,
-    "root_width_std": 0,
-    "hair_length": 80,
+    "root_width": 5,
+    "root_width_std": 1,
+    "hair_length": 30,
     "hair_length_std": 10,
     "hair_thickness": 1,
-    "hair_thickness_std": 1,
-    "hair_craziness": 1,  # 0 or 1
+    "hair_thickness_std": 0,
+    "hair_craziness": 0,  # 0 or 1
     "hair_density": 0.05,
     "img_width": 300,
     "img_height": 300
@@ -197,7 +238,7 @@ if __name__ == '__main__':
     "root_width_std": [0, 1],
     "hair_length": [10, 20, 30, 50, 80],
     "hair_length_std": [10, 20, 30],
-    "hair_thickness": [1, 3],
+    "hair_thickness": [1, 3, 5],
     "hair_thickness_std": [0, 1],
     "hair_craziness": [0, 0, 0, 1],
     "hair_density": [0.01, 0.1, 0.3, 0.3, 0.2, 0.5, 1, 2],
@@ -205,17 +246,17 @@ if __name__ == '__main__':
     "img_height": 300
   }
 
-  # params = {
-  #   "root_width": 10,
-  #   "root_width_std": 0,
-  #   "hair_length": 80,
-  #   "hair_length_std": 10,
-  #   "hair_thickness": 1,
-  #   "hair_thickness_std": 1,
-  #   "hair_craziness": 1,  # 0 or 1
-  #   "hair_density": 0.05,
-  #   "img_width": 300,
-  #   "img_height": 300
+  # possibilities = {
+  #   "root_width": [2],
+  #   "root_width_std": [0],
+  #   "hair_length": [10],
+  #   "hair_length_std": [10],
+  #   "hair_thickness": [1],
+  #   "hair_thickness_std": [0],
+  #   "hair_craziness": [0],
+  #   "hair_density": [0.3],
+  #   "img_width": 600,
+  #   "img_height": 600
   # }
-  main()
-  # run_(possibilities)
+  # main()
+  run_(possibilities)
