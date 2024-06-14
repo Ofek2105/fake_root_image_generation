@@ -8,6 +8,7 @@ from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 import cv2
 
+
 def plot_bin_root_hairs(properties):
   fig, axes = plt.subplots(1, 3, figsize=(15, 5))
   fig.suptitle(f'{properties["hair count"]} hairs')
