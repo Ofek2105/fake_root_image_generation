@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from skimage.draw import line as draw_line
 from skimage.transform import resize
 from scipy.ndimage import binary_fill_holes
-from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve, draw_single_root_end
+from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve, draw_single_root_end, draw_my_thick_bezier_curve_old
+from SynDataGeneration.my_bezier_curve import draw_root_end_bezier_curve
 from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 import cv2
@@ -148,8 +149,8 @@ class RootImageGenerator:
       control_point = (point + cp_inc).astype(int)
       end_point = (point + normal * hair_length).astype(int)
 
-      polygon_, bbox_ = draw_my_thick_bezier_curve(bin_image, point,
-                                                   control_point,
+      polygon_, bbox_ = draw_my_thick_bezier_curve_old(bin_image, point,
+                                                   control_point, delta,
                                                    end_point, thickness, self.hair_craziness,
                                                    neg_mask=self.root_image_bi)
       if len(bbox_) == 0:
@@ -168,8 +169,10 @@ class RootImageGenerator:
     start_root_dir = -1 * self.deltas[0]
     end_root_dir = self.deltas[-1]
 
-    draw_single_root_end(self.root_image_bi, start1, start2, start_root_dir, thickness_=self.root_width)
-    draw_single_root_end(self.root_image_bi, end1, end2, end_root_dir, thickness_=self.root_width)
+    draw_root_end_bezier_curve(self.root_image_bi, start1, start2, start_root_dir)
+    draw_root_end_bezier_curve(self.root_image_bi, end1, end2, end_root_dir)
+    # draw_single_root_end(self.root_image_bi, start1, start2, start_root_dir, thickness_=self.root_width)
+    # draw_single_root_end(self.root_image_bi, end1, end2, end_root_dir, thickness_=self.root_width)
 
   def generate(self, new_shape=None):
     line1, line2 = self.generate_parallel_lines()
