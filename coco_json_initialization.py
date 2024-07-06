@@ -35,13 +35,23 @@ class CocoDataset:
 
   def add_annotation(self, image_id, category_id, bbox, segmentation, area):
     self.annotation_counter += 1
+
+    bbox = [float(x) for x in bbox]
+
+    if isinstance(segmentation[0], float):  # If segmentation is a single list of floats
+      segmentation = [segmentation]
+    segmentation = [[float(coord) for coord in segment] for segment in segmentation]
+
+    if bbox is [] or segmentation is []:
+      raise ValueError("Bbox or segmentation are empty")
+
     self.dataset['annotations'].append({
       "id": self.annotation_counter,
       "image_id": image_id,
       "category_id": category_id,
-      "bbox": str(bbox),  # [x, y, width, height]
-      "segmentation": str(segmentation),  # [[x1, y1, x2, y2, ..., xn, yn]]
-      "area": str(area),
+      "bbox": bbox,  # [x, y, width, height]
+      "segmentation": segmentation,  # [[x1, y1, x2, y2, ..., xn, yn]]
+      "area": float(area),
       "iscrowd": 0
     })
 
