@@ -80,6 +80,9 @@ def draw_my_thick_bezier_curve_old(bin_image, s1_point, m_point, s2_direction, e
     rr, cc = polygon(np.append(upper_curve[:, 1], lower_curve[::-1, 1]),
                      np.append(upper_curve[:, 0], lower_curve[::-1, 0]))
 
+    if len(cc) == 0:
+        return [], []
+
     empty_bin = np.zeros_like(bin_image)
     valid = (rr >= 0) & (rr < empty_bin.shape[0]) & (cc >= 0) & (cc < empty_bin.shape[1])
     empty_bin[rr[valid], cc[valid]] = 1  # draw the hair on empty for annotation
