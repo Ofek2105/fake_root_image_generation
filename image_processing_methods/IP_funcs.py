@@ -34,4 +34,4 @@ def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
 
     return polygon_points, bbox
-  return [], []
+  return [[]], []
