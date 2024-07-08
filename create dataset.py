@@ -163,11 +163,7 @@ def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
         f.write(row)
 
         for i in range(prop_["hair count"]):
-            hair_poly = prop_["hairs polygons"]
-            if isinstance(prop_["hairs polygons"][0], list):
-                hair_poly = hair_poly[0]
-
-            row = f'0 {" ".join([str(val) for val in hair_poly])}\n'
+            row = f'0 {" ".join([str(val) for val in prop_["hairs polygons"][i]])}\n'
             f.write(row)
 
 
