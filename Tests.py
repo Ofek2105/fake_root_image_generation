@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Step 1: Convert into Grayscale
-color_image = cv2.imread(r'res\type_3\arb_sr_x4.png')
-# color_image = cv2.imread(r'res\type_2\zoomIn.png')
-# color_image = cv2.imread(r'res\type_1\SR_P1_X4.png')
+color_image = cv2.imread(r'results\type_3\arb_sr_x4.png')
+# color_image = cv2.imread(r'results\type_2\zoomIn.png')
+# color_image = cv2.imread(r'results\type_1\SR_P1_X4.png')
 
 gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
 
@@ -66,6 +66,6 @@ brightest_mask = np.uint8(labels == brightest_label) * 255
 # cv2.imshow('Mean Shift Filtered Image', shifted_image)
 # cv2.imshow('Brightest Cluster Mask', brightest_mask)
 
-cv2.imwrite(r'res\omer_tests\arb_sr_x4.png', brightest_mask)
+cv2.imwrite(r'results\omer_tests\arb_sr_x4.png', brightest_mask)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
