@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 RIGHT_TAIL_THRESHOLD = 0.75
-
+id_ = 0
 
 def plot_histogram_with_thresholds(image_path, our_threshold, otsu_threshold):
 
@@ -55,6 +55,8 @@ def get_largest_contur(bin_image_, plot_=False):
     cv2.drawContours(black_image, [largest_contour], -1, 255, -1)
 
   if plot_:
+    file_name = fr"C:\Users\Ofek\Projects\OferHadar\RootHairsAnalysis\TEST DATA\binary\bell_sr_x8.png"
+    cv2.imwrite(file_name, black_image)
     plt.imshow(black_image, cmap='gray')
     plt.show()
   return black_image
@@ -64,11 +66,11 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="",
   hairs_bin_image = get_hairs_tips_bin_image(binary_image)
   hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=1)
 
-  image_hairs_highlight = draw_overlay_on_canvas(binary_image, hairs_dilated)
   hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
   if plot_ or filename:
-    fig, ax = plt.subplots(1, 3, figsize=(45, 15))
+
+    fig, ax = plt.subplots(1, 2, figsize=(45, 15))
     font_size = 50
     if suptitle_ is not None:
       fig.suptitle(f'{suptitle_}', fontsize=font_size)
@@ -78,11 +80,11 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="",
       truth_count = f'hair count={truth_count}'
     ax[0].set_title(f'Base Binary image {truth_count}', fontsize=font_size)
 
-    ax[1].imshow(hairs_dilated, cmap='gray')
-    ax[1].set_title('Found Hair Tips', fontsize=font_size)
-
-    ax[2].imshow(image_hairs_highlight)
-    ax[2].set_title(f'predicted hair count = {len(hairs_contours)}', fontsize=font_size)
+    # ax[1].imshow(hairs_dilated, cmap='gray')
+    # ax[1].set_title('Found Hair Tips', fontsize=font_size)
+    image_hairs_highlight = draw_overlay_on_canvas(binary_image, hairs_dilated)
+    ax[1].imshow(image_hairs_highlight)
+    ax[1].set_title(f'predicted hair count = {len(hairs_contours)}', fontsize=font_size)
     plt.axis('off')
 
   if filename is not None:
@@ -96,11 +98,11 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="",
 
 def get_hairs_tips_bin_image(binary_image):
   kernel = np.ones((3, 3), np.uint8)
-  # erosion = cv2.erode(binary_image, kernel, iterations=1)
-  # dilation = cv2.dilate(erosion, kernel, iterations=1)
   bin_image_morph = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
   bin_image_morph = cv2.morphologyEx(bin_image_morph, cv2.MORPH_CLOSE, kernel)
   hairs = cv2.subtract(binary_image, bin_image_morph)
+  # hairs = cv2.erode(hairs, kernel, iterations=1)
+  hairs = cv2.dilate(hairs, kernel, iterations=2)
   return hairs
 
 
@@ -209,8 +211,10 @@ def get_image_hair_count(image_path, plot_report=False, blur=None):
 
 
 if __name__ == '__main__':
-  image_paths = [r'../TEST DATA/base/arb_lr.png',
-                 r'../TEST DATA/base/bell_lr.jpg']
+  image_paths = [r'../TEST DATA/base_path/arb_lr.png',
+                 r'../TEST DATA/base_path/bell_lr.jpg']
+
+  image_paths = [r'../TEST DATA/BELL PEPEER/SR_P1_X8.png']
 
   # plot_histogram_with_thresholds(image_paths[0], our_threshold=147, otsu_threshold=127)
   # plot_histogram_with_thresholds(image_paths[1], our_threshold=102, otsu_threshold=88)
@@ -221,7 +225,7 @@ if __name__ == '__main__':
   # for image_path in image_paths:
 #   for blur_prop in blur_props:
   n_hairs = get_image_hair_count(image_paths[0], plot_report=True)
-  n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
+  # n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
 
 
   # base_path = r'TEST DATA\\ARBIDIOPSIS'
