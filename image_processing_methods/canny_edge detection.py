@@ -87,8 +87,8 @@ def draw_lines(image, lines):
     cv2.line(image, (x, y), (int(r * np.cos(theta)), int(r * np.sin(theta))), (0, 0, 255), 2)
 
 
-# image = cv2.imread(r'res\type_2\zoomIn.png')
-image = cv2.imread(r'../res/type_3/arb_sr_x4.png')
+# image = cv2.imread(r'results\type_2\zoomIn.png')
+image = cv2.imread(r'../results/type_3/arb_sr_x4.png')
 
 # ========== canny - edge detection ==========
 edge_detected_canny = canny_edge_detection(image, 1)
