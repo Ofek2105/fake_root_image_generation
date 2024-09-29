@@ -11,8 +11,8 @@ def draw_box(ax, rect_out_, rect_in_):
         rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor=color, facecolor='none', linestyle=':')
         ax.add_patch(rect)
 
-    ax.set_xlim(0, 300)
-    ax.set_ylim(0, 300)
+    ax.set_xlim(0, 900)
+    ax.set_ylim(0, 900)
 
     color = 'red'
     draw_dotted_rect(ax, rect_out_, color)
@@ -27,8 +27,9 @@ def generate_initial_points(N, rect_out_, rect_in_):
 
     points = []
     while len(points) < N:
-        x = np.random.uniform(out_s_col, out_end_col)
-        y = np.random.uniform(out_s_row, out_end_row)
+
+        x = np.random.randint(out_s_col, out_end_col)
+        y = np.random.randint(out_s_row, out_end_row)
 
         if not (in_s_col <= x <= in_end_col and in_s_row <= y <= in_end_row):
             points.append([x, y])
@@ -81,18 +82,18 @@ def calculate_direction(start_point, rect_in_):
 
 
 def random_walk_line(start_point, rect_out_, rect_in_,
-                     stop_chance=0.001, step_size=1,
-                     momentum=0.9, steps=1000):
+                     stop_chance=0, step_size=3,
+                     momentum=0.9, steps=2000):
+
     x, y = start_point
     initial_direction = calculate_direction(start_point, rect_in_)
-    direction = np.radians(initial_direction + np.random.uniform(-5, 5))  # Adding a random bias
+    direction = np.radians(initial_direction + np.random.uniform(-5, 5))
     x_coords, y_coords = [x], [y]
 
     for _ in range(steps):
         if np.random.rand() < stop_chance:
             break  # Random chance to stop the line
 
-        # mean_shift = -last_sign * consecutive_count * bias_adjustment_factor
         change = np.random.normal(0, scale=(1 - momentum))
 
         direction += change
@@ -105,8 +106,8 @@ def random_walk_line(start_point, rect_out_, rect_in_,
         if not is_in_rect(x, y, rect_out_):
             break
 
-        x_coords.append(x)
-        y_coords.append(y)
+        x_coords.append(int(x))
+        y_coords.append(int(y))
 
     return x_coords, y_coords
 
@@ -118,7 +119,7 @@ def is_in_rect(x_coords, y_coords, rect_):
     return False
 
 
-def generator_main_roots(N, minimum_length=50):
+def generator_main_roots(N, rect=None, minimum_length=200):
     """
     a generator that yields points. each is resembling a main root
     :param N: number of roots to generate
@@ -129,7 +130,7 @@ def generator_main_roots(N, minimum_length=50):
     :return: yields points
     """
 
-    rect_out_ = (50, 50, 250, 250)
+    rect_out_ = (50, 50, 250, 250) if rect is None else rect
     delt = 20
     rect_in_ = (rect_out_[0] + delt, rect_out_[1] + delt, rect_out_[2] - delt, rect_out_[3] - delt)
 
@@ -147,7 +148,7 @@ def generator_main_roots(N, minimum_length=50):
 def plot_steps():
     fig, ax = plt.subplots()
     fig.patch.set_facecolor('black')
-    rect_out_ = (50, 50, 250, 250)
+    rect_out_ = (50, 50, 550, 550)
     delt = 20
     rect_in_ = (rect_out_[0] + delt, rect_out_[1] + delt, rect_out_[2] - delt, rect_out_[3] - delt)
 
@@ -166,7 +167,7 @@ def plot_steps():
 if __name__ == "__main__":
     plot_steps()
 
-    # for main_root_points in generator_main_roots(50):
-    #     plt.scatter(main_root_points[:, 0], main_root_points[:, 1])
-    #     plt.show()
-    #     break
+    for main_root_points in generator_main_roots(50):
+        plt.scatter(main_root_points[:, 0], main_root_points[:, 1])
+        plt.show()
+        break
