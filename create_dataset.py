@@ -87,10 +87,11 @@ def save_binary_image(binary_image, base_path, params, image_id, hair_count=None
     #     f"_h{params['img_height']}_{image_id}.png")
 
     file_name = f"{str(time.time()).replace('.', '')}_{image_id}.png"
-
     file_path = os.path.join(base_path, file_name)
-
-    image = Image.fromarray((binary_image * 255).astype(np.uint8))
+    if len(binary_image.shape) == 3:  # not bin_image
+        image = Image.fromarray(binary_image)
+    else:
+        image = Image.fromarray((binary_image * 255).astype(np.uint8))
     image.save(file_path)
 
     return file_path, file_name
@@ -130,12 +131,12 @@ def plot_with_annotations(properties):
     hairs_bbox = properties["hairs bbox"]
     root_bbox = properties["Main root bbox"]
     root_polygon = properties["Main root polygon"]
-    font_size_ = 115
+    font_size_ = None
     linewidth_poly = 8
     linewidth_bbox = 5
 
     # Create a figure and a subplot
-    fig, ax = plt.subplots(1, 2, figsize=(60, 30))
+    fig, ax = plt.subplots(1, 2)
     ax[0].imshow(full_image, cmap='gray')
     ax[1].imshow(full_image, cmap='gray')
     ax[0].set_title("Synthetic root", size=font_size_)
@@ -231,11 +232,12 @@ def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
 
 
 def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
-    for main_root_points in generator_main_roots(n_unique_roots):
+    rect_out_ = (params["img_width"]*0.1, params["img_height"]*0.1, params["img_width"]*0.9, params["img_height"]*0.9)
+    for main_root_points in generator_main_roots(n_unique_roots, rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
 
         for _ in range(images_per_root):
-            properties = root_image_class.generate()
+            properties = root_image_class.generate(new_shape=(320, 320))
             _, filename = save_binary_image(properties["full image"], "dataset\\images", params,
                                             annotate_specific_params_yolo.counter_id,
                                             hair_count=properties["hair count"])
@@ -283,57 +285,54 @@ def count_iterations(possibilities_dict):
 
 
 def show_images():
-    np.random.seed(21)
-    N = 5
+    # np.random.seed(21)
+    print("Generating and Plotting images")
+    N = 50
 
     params = {
-        "root_width": 7,
-        "root_width_std": 0.36,
+        "root_width": 30,
+        "root_width_std": 2,
         "hair_length": 50,
-        "hair_length_std": 30,
-        "hair_thickness": 1,
-        "hair_thickness_std": 0,
-        "hair_craziness": 1,  # 0 or 1
-        "hair_density": 0.15,
-        "img_width": 300,
-        "img_height": 300
+        "hair_length_std": 40,
+        "hair_thickness": 5,
+        "hair_thickness_std": 2,
+        "hair_craziness": 0.90,  # 0 or 1
+        "hair_density": 0.2,
+        "img_width": 960,
+        "img_height": 960,
+        "root_start_percent": 0.20,
+        "root_end_percent": 0.03,
+        "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
     }
+    # rect_out_ = (50, 50, 250, 250)
+    rect_out_ = (params["img_width"]*0.1, params["img_height"]*0.1, params["img_width"]*0.9, params["img_height"]*0.9)
 
-    for main_root_points in generator_main_roots(N):
+    for main_root_points in generator_main_roots(N, rect=rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
-        properties = root_image_class.generate(new_shape=(300, 300))
+        properties = root_image_class.generate(add_soil=True, add_flare=True)
         plot_with_annotations(properties)
 
 
 if __name__ == '__main__':
-    possibilities = {
-        "root_width": [7, 10],
-        "root_width_std": [0, 0.3, 0.5],
-        "hair_length": [15, 20, 30],
-        "hair_length_std": [10, 20, 30],
-        "hair_thickness": [1, 2, 3],
-        "hair_thickness_std": [0],
-        "hair_craziness": [0],
-        "hair_density": [0.05, 0.1, 0.15],
-        "img_width": 300,
-        "img_height": 300
-    }
 
-    # possibilities = {
-    #   "root_width": [2],
-    #   "root_width_std": [0],
-    #   "hair_length": [10],
-    #   "hair_length_std": [10],
-    #   "hair_thickness": [1],
-    #   "hair_thickness_std": [0],
-    #   "hair_craziness": [0],
-    #   "hair_density": [0.3],
-    #   "img_width": 600,
-    #   "img_height": 600
-    # }
+    possibilities = {
+        "root_width": [20, 30, 40],
+        "root_width_std": [2, 3],
+        "hair_length": [20, 40, 60, 100],
+        "hair_length_std": [5, 50],
+        "hair_thickness": [5, 8],
+        "hair_thickness_std": [2],
+        "hair_craziness": [0.9, 0.98],  # 0 or 1
+        "hair_density": [0.15, 0.20],
+        "img_width": 960,
+        "img_height": 960,
+        "root_start_percent": [0.20],
+        "root_end_percent": [0.03, 0.50],
+        "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
+    }
     n_main_root = 10
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
-    # run_coco(possibilities) # doesnt seem to work right
+    # run_coco(possibilities)  # doesnt seem to work right
     # show_images()
     run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
