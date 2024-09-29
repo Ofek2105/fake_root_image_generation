@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
@@ -56,7 +58,7 @@ def get_largest_contur(bin_image_, plot_=False):
         cv2.drawContours(black_image, [largest_contour], -1, 255, -1)
 
     if plot_:
-        file_name = fr"C:\Users\Ofek\Projects\OferHadar\RootHairsAnalysis\TEST DATA\binary\bell_sr_x8.png"
+        file_name = fr"C:\Users\Ofek\Projects\OferHadar\RootHairsAnalysis\results\operated\binary_.png"
         cv2.imwrite(file_name, black_image)
         plt.imshow(black_image, cmap='gray')
         plt.show()
@@ -65,7 +67,7 @@ def get_largest_contur(bin_image_, plot_=False):
 
 def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="", suptitle_=None):
     hairs_bin_image = get_hairs_tips_bin_image(binary_image)
-    hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=1)
+    hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((1, 1), np.uint8), iterations=0)
 
     hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -198,6 +200,82 @@ def get_root_and_hairs_mask_OTSU(image, plot_report, blur_=None, return_TH_value
     return root_image
 
 
+def find_triangle_threshold(image, plot_report_=False):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    vals = gray.flatten()
+    counts, bins = np.histogram(vals, range(256))
+    counts = counts / np.max(counts)
+
+    peak_x = np.argmax(counts)
+    left_diff = np.diff(counts[:peak_x])
+    right_diff = np.diff(counts[peak_x:])
+
+    if len(left_diff) > len(right_diff):
+        left_diff = left_diff[:len(right_diff)]
+    elif len(right_diff) > len(left_diff):
+        right_diff = right_diff[:len(left_diff)]
+
+    valley_index = np.argmax(left_diff + right_diff) + peak_x
+    triangle_threshold = bins[valley_index]
+
+    if plot_report_:
+        plt.figure(figsize=(10, 5))
+        plt.bar(bins[:-1] - 0.5, counts, width=1, edgecolor='none')
+        plt.axvline(x=triangle_threshold, color='r', linestyle='-', label=f'Triangle TH x={triangle_threshold}')
+        plt.xlim([-0.5, 255.5])
+        plt.legend()
+        plt.show()
+
+    return triangle_threshold
+
+
+def get_root_and_hairs_mask_Triangle(image, plot_report_=False, return_TH_value=False):
+    triangle_th = find_triangle_threshold(image, plot_report_)
+    print(f'Triangle TH value {triangle_th}')
+    chosen_range = (int(triangle_th), 255)
+    bin_image = img_intensity_range(image, chosen_range, plot=plot_report_)
+    root_image = get_largest_contur(bin_image, plot_report_)
+    if return_TH_value:
+        return root_image, triangle_th
+    return root_image
+
+
+def get_root_and_hairs_mask_AdaptiveMean(image, plot_report_=False, return_TH_value=False):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    block_size = 11  # Default block size
+    C = 2  # Default C value
+    adaptive_mean_th = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                             cv2.THRESH_BINARY, block_size, C)
+    root_image = get_largest_contur(adaptive_mean_th, plot_report_)
+    if plot_report_:
+        plt.figure(figsize=(10, 5))
+        plt.title(f'Adaptive Mean TH (C={C})')
+        plt.imshow(adaptive_mean_th, cmap='gray')
+        plt.axis('off')
+        plt.show()
+    if return_TH_value:
+        return root_image, C
+    return root_image
+
+
+def get_root_and_hairs_mask_AdaptiveGaussian(image, plot_report_=False, return_TH_value=False):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    block_size = 11  # Default block size
+    C = 2  # Default C value
+    adaptive_gaussian_th = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                 cv2.THRESH_BINARY, block_size, C)
+    root_image = get_largest_contur(adaptive_gaussian_th, plot_report_)
+    if plot_report_:
+        plt.figure(figsize=(10, 5))
+        plt.title(f'Adaptive Gaussian TH (C={C})')
+        plt.imshow(adaptive_gaussian_th, cmap='gray')
+        plt.axis('off')
+        plt.show()
+    if return_TH_value:
+        return root_image, C
+    return root_image
+
+
 def get_title(full_path):
     title_name = full_path.split('\\')[-1].split('.')[0]
     return " ".join(title_name.split('_'))
@@ -210,16 +288,31 @@ def save_plot(image, title, path):
     plt.savefig(path)
 
 
-def get_image_hair_count(image_path, plot_report=False, blur=None):
+def get_image_hair_count(image_path, th_algo="Our", plot_report=False, blur=None, save_bin=None):
     # save_path = r'TEST DATA/results/lr/lr_bell.png'
     # file_title = get_title(image_path)
     sup_tit = ""
     if blur is not None:
         sup_tit = f'OSTU algo blur kernal ({blur[0]}, {blur[1]}) sigma {blur[2]}'
     image = cv2.imread(image_path)
-    root_bin_image = get_root_and_hairs_mask_OG(image, True)
-    hair_contours = get_hairs_contours(root_bin_image, filename=None, plot_=plot_report, suptitle_=sup_tit)
+
+    if th_algo == "Our":
+        root_bin_image = get_root_and_hairs_mask_OG(image, plot_report)
+    elif th_algo == "OTSU":
+        root_bin_image = get_root_and_hairs_mask_OTSU(image, plot_report, blur_=blur)
+    elif th_algo == "Triangle":
+        root_bin_image = get_root_and_hairs_mask_Triangle(image, plot_report)
+    elif th_algo == "Adaptive Mean":
+        root_bin_image = get_root_and_hairs_mask_AdaptiveMean(image, plot_report)
+    elif th_algo == "Adaptive Gaussian":
+        root_bin_image = get_root_and_hairs_mask_AdaptiveGaussian(image, plot_report)
+    else:
+        raise ValueError(f"Unknown thresholding algorithm: {th_algo}")
+
+    hair_contours = get_hairs_contours(root_bin_image, filename=save_bin, plot_=plot_report, suptitle_=sup_tit)
     hair_num = len(hair_contours)
+    # if save_bin is not None:
+    #     cv2.imwrite(save_bin, root_bin_image)
     # original_image_with_contours = draw_contours(image, hair_contours, plot_report)
     # bin_image_with_contours = draw_contours(root_bin_image, hair_contours, (0, 255, 0), plot_report)
 
@@ -227,29 +320,18 @@ def get_image_hair_count(image_path, plot_report=False, blur=None):
     return hair_num
 
 
-
-
-
 if __name__ == '__main__':
-    image_paths = [r'../TEST DATA/base/arb_lr.png',
-                   r'../TEST DATA/base/bell_lr.jpg']
+    # image_paths = [r'../TEST DATA/base/arb_lr.png',
+    #                r'../TEST DATA/base/bell_lr.jpg']
 
     # image_paths = [r'../TEST DATA/BELL PEPEER/SR_P1_X2.png']
-
-    img = cv2.imread(image_paths[0])
-
+    # n_hairs = get_image_hair_count(image_paths[0], th_algo="Our", plot_report=True)
     # plot_histogram_with_thresholds(image_paths[0], our_threshold=147, otsu_threshold=127)
     # plot_histogram_with_thresholds(image_paths[1], our_threshold=102, otsu_threshold=88)
+    folder_path = r'C:\Users\Ofek\Desktop\arb_root_images'
+    for file_name in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, file_name)
+        n_hairs = get_image_hair_count(file_path, plot_report=False, save_bin=f"../results/bin_arb_roots/{file_name}")
 
-    # blur_props = [None, (3, 3, 0), (5, 5, 0), (11, 11, 0)]
-    # blur_props = [None]
-    # for image_path in image_paths:
-    #   for blur_prop in blur_props:
-    n_hairs = get_image_hair_count(image_paths[0], plot_report=True)
     # n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
 
-    # base_path = r'TEST DATA\\ARBIDIOPSIS'
-    # for file_name in os.listdir(base_path):
-    #   full_path = os.path.join(base_path, file_name)
-    #   n_hairs = get_image_hair_count(full_path, plot_report=False)
-    #   print(f'{file_name} Hairs number: {n_hairs}')
