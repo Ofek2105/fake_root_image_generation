@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
 from skimage.draw import polygon
@@ -114,10 +116,7 @@ def draw_root_end_bezier_curve(bin_image, s1, s2, direction, length=20):
     valid = (rr >= 0) & (rr < bin_image.shape[0]) & (cc >= 0) & (cc < bin_image.shape[1])
     bin_image[rr[valid], cc[valid]] = 1  # Set pixels within polygon to 1
 
-
     return bin_image
-
-
 
 
 def draw_single_root_end(bin_image, p1, p2, direction, length=10, thickness_=5, hair_crazy_=100):
@@ -154,3 +153,64 @@ def get_straight_thick_line(curve, thickness):
         upper_curve = np.array([start + direction, end + direction])
         lower_curve = np.array([start - direction, end - direction])
         return lower_curve, upper_curve
+
+
+def draw_hair_random_walk(binary_image, point, initial_direction, line_length, initial_width, step_size,
+                          momentum=0.9, neg_mask=None):
+    """
+    Draws a hair-like line on a binary image using a random walk and returns the polygons and bounding box.
+
+    Args:
+        binary_image: The input binary image.
+        point: The starting point of the line.
+        direction: The initial direction of the line (angle in radians).
+        line_length: The desired length of the line.
+        initial_width: The initial thickness of the line.
+        step_size: The step size of the random walk.
+
+    Returns:
+        A tuple containing:
+            - The modified binary image with the drawn line.
+            - A list of polygons representing the hair.
+            - The bounding box of the hair.
+    """
+
+    # dx, dy = np.cos(direction[0]), np.sin(direction[1])
+    current_point = point
+    current_width = initial_width
+    width_decay_rate = 0.05
+
+    empty_bin = np.zeros_like(binary_image)
+    direction = point_to_direction(initial_direction)
+    # momentum_increment = 0.01  # Adjust this value as needed
+    iterations = int(line_length // step_size)
+
+    for _ in range(iterations):
+        current_width = max(2, current_width)
+        next_point = (int(current_point[0] + step_size * np.cos(direction)), int(current_point[1] + step_size * np.sin(direction)))
+
+        cv2.line(empty_bin, current_point, next_point, 255, int(current_width))
+        cv2.line(binary_image, current_point, next_point, 255, int(current_width))
+
+        current_point = next_point
+
+        # momentum += momentum_increment * (line_length - _) / line_length
+        # momentum = min(momentum, 1)
+        change = np.random.normal(0, scale=(1 - momentum))
+        # change = 0
+
+        direction += change
+        current_width = current_width - (current_width * width_decay_rate * _ / line_length)
+
+    polygon_points, bbox = get_polygons_bbox_from_bin_image(empty_bin, neg_mask)
+
+    return polygon_points, bbox
+
+
+def point_to_direction(point):
+    """Converts a point to a direction in radians."""
+    x, y = point
+    angle = math.atan2(y, x)
+    if angle < 0:
+        angle += 2 * math.pi
+    return angle
