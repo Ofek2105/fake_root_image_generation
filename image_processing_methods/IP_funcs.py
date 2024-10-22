@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import rdp
-
+import random
 
 def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     result = bin_image.copy()
@@ -50,9 +50,9 @@ def generate_random_alpha_gradient(img_size, non_linear=True, visibility=0.8, ra
 
     if non_linear:
         base_value = visibility * (
-            1 + np.sin(
-                frequency * (x_direction * y_indices + y_direction * x_indices) / (height + width) * np.pi + phase_shift
-            )
+                1 + np.sin(
+            frequency * (x_direction * y_indices + y_direction * x_indices) / (height + width) * np.pi + phase_shift
+        )
         )
     else:
         base_value = visibility * (y_indices + x_indices) / (height + width)
@@ -79,9 +79,16 @@ def customAddWeighted(src1, alpha, src2, beta, gamma=0):
 def apply_alpha_blending(rgb_image, soil_image):
     alpha = generate_random_alpha_gradient(rgb_image.shape[:2], non_linear=True)
 
-    blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1-alpha, 0)
+    blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1 - alpha, 0)
 
     return blended_image
+
+
+def add_channel_noise(image, stddev=5):
+
+    noise = np.random.normal(0, stddev, image.shape).astype(np.float32)
+    noisy_image = np.clip(image + noise, 0, 255).astype(np.uint8)
+    return noisy_image
 
 
 def add_light_effect(image, intensity=1.5, spread=0.4):
@@ -99,6 +106,46 @@ def add_light_effect(image, intensity=1.5, spread=0.4):
 
     return np.clip(brightened_image, 0, 255).astype(np.uint8)
 
+
+def apply_motion_blur(image, degree=15, apply_chane=0.5):
+    if random.random() > apply_chane:
+        return image
+
+    # Create a motion blur kernel
+    M = np.zeros((degree, degree))
+    M[int((degree - 1) / 2), :] = np.ones(degree)
+
+    angle = np.random.uniform(-180, 180)
+
+    M = cv2.warpAffine(M, cv2.getRotationMatrix2D((degree / 2 - 0.5, degree / 2 - 0.5), angle, 1.0), (degree, degree))
+    M = M / degree
+
+    # Apply the kernel to the image
+    blurred = cv2.filter2D(image, -1, M)
+    return blurred
+
+
+def apply_random_vortex_blur(img, strength=0.0005, apply_chane=0.5):
+    if random.random() > apply_chane:
+        return img
+
+    h, w, _ = img.shape
+    cx = np.random.randint(w // 4, 3 * w // 4)
+    cy = np.random.randint(h // 4, 3 * h // 4)
+    y, x = np.indices((h, w))
+    dx = x - cx
+    dy = y - cy
+    distance = np.sqrt(dx**2 + dy**2)
+    angle = np.arctan2(dy, dx)
+    angle_distorted = angle + strength * distance
+    new_x = cx + distance * np.cos(angle_distorted)
+    new_y = cy + distance * np.sin(angle_distorted)
+    new_x = np.clip(new_x, 0, w - 1).astype(np.float32)
+    new_y = np.clip(new_y, 0, h - 1).astype(np.float32)
+    vortex_blurred = np.zeros_like(img)
+    for i in range(3):
+        vortex_blurred[..., i] = cv2.remap(img[..., i], new_x, new_y, interpolation=cv2.INTER_LINEAR)
+    return vortex_blurred
 
 
 if __name__ == "__main__":
@@ -139,5 +186,3 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.show()
-
-
