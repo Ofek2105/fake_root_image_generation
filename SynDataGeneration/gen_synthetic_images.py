@@ -2,7 +2,6 @@ import math
 import random
 
 from image_processing_methods.IP_funcs import (
-    generate_random_alpha_gradient,
     apply_alpha_blending,
     add_light_effect)
 
@@ -105,7 +104,8 @@ class RootImageGenerator:
         self.img_height = img_height
 
         self.normals, self.deltas = self.compute_normals()
-        self.root_image_bi = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
+        self.root_mask = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
+        self.hairs_mask = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
 
     def compute_normals(self, window_size=2):
         if window_size < 2:
@@ -146,6 +146,7 @@ class RootImageGenerator:
         line2 = []
         half_width = self.root_width / 2
         half_width_std = self.root_width_std / 2
+        self.offset1_list = []
         for idx in range(len(self.points)):
             point = self.points[idx]
             normal = self.normals[idx]
@@ -154,38 +155,21 @@ class RootImageGenerator:
                 offset1 = np.random.normal(idx * half_width / (root_start_pos + 1), half_width_std)
                 offset2 = np.random.normal(idx * half_width / (root_start_pos + 1), half_width_std)
             elif idx > root_end_pos:
-                offset1 = np.random.normal((len(self.points) - idx) * half_width / self.no_hair_area_end, half_width_std)
-                offset2 = np.random.normal((len(self.points) - idx) * half_width / self.no_hair_area_end, half_width_std / 2)
+                offset1 = np.random.normal((len(self.points) - idx) * half_width / self.no_hair_area_end,
+                                           half_width_std)
+                offset2 = np.random.normal((len(self.points) - idx) * half_width / self.no_hair_area_end,
+                                           half_width_std / 2)
             else:
                 offset1 = np.random.normal(half_width, half_width_std)
                 offset2 = np.random.normal(half_width, half_width_std)
 
+            self.offset1_list.append(offset1)
             new_point1 = point + normal * offset1
             new_point2 = point - normal * offset2
             line1.append(new_point1)
             line2.append(new_point2)
 
         return [line1, line2]
-
-    def draw_lines_connections(self, lin1, lin2):
-
-        for lin in [lin1, lin2]:
-            for i in range(len(lin) - 1):
-                start = np.clip(lin[i], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-                end = np.clip(lin[i + 1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-                rr, cc = draw_line(start[1], start[0], end[1], end[0])
-                self.root_image_bi[rr, cc] = 1
-
-        # Close the root shape by connecting the ends of lin1 and lin2
-        start_top = np.clip(lin1[0], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-        end_top = np.clip(lin2[0], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-        rr, cc = draw_line(start_top[1], start_top[0], end_top[1], end_top[0])
-        self.root_image_bi[rr, cc] = 1
-
-        start_bottom = np.clip(lin1[-1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-        end_bottom = np.clip(lin2[-1], 0, [self.img_width - 1, self.img_height - 1]).astype(int)
-        rr, cc = draw_line(start_bottom[1], start_bottom[0], end_bottom[1], end_bottom[0])
-        self.root_image_bi[rr, cc] = 1
 
     def gen_hair_pos(self):
 
@@ -203,7 +187,7 @@ class RootImageGenerator:
         for i in range(start, end, max(1, step)):
             yield i
 
-    def draw_hairs(self, bin_image):
+    def draw_hairs(self):
         actual_root_count = 0
         hairs_bboxes = []
         hairs_polygons = []
@@ -220,7 +204,8 @@ class RootImageGenerator:
             if np.random.rand() > 0.5:
                 normal = -normal
 
-            hair_length = np.random.normal(self.hair_length + self.root_width + self.root_width_std, self.hair_length_std)
+            hair_length = np.random.normal(self.hair_length + self.root_width + self.root_width_std,
+                                           self.hair_length_std)
 
             if hair_length < self.root_width + self.root_width_std:
                 continue
@@ -232,37 +217,25 @@ class RootImageGenerator:
             end_point = (point + normal * hair_length).astype(int)
 
             if self.hair_type == "bezier":
-                polygon_, bbox_ = draw_my_thick_bezier_curve_old(bin_image, point,
+                polygon_, bbox_ = draw_my_thick_bezier_curve_old(self.hairs_mask, point,
                                                                  control_point, delta,
                                                                  end_point, thickness, self.hair_craziness,
-                                                                 neg_mask=self.root_image_bi)
+                                                                 neg_mask=self.root_mask)
             elif self.hair_type == "random_walk":
-                polygon_, bbox_ = draw_hair_random_walk(bin_image, point, normal, hair_length,
+                polygon_, bbox_ = draw_hair_random_walk(self.hairs_mask, point, normal, hair_length,
                                                         momentum=self.hair_craziness,
-                                                        initial_width=thickness, step_size=3, neg_mask=self.root_image_bi)
+                                                        initial_width=thickness, step_size=3, neg_mask=self.root_mask)
             else:
                 raise NotImplementedError("hair type not defined, choose 'bezier' or 'random_walk'")
 
             if len(bbox_) == 0:
-                # print("could not find the polygon")
                 continue
 
-            hairs_bboxes.append(bbox_)
+            hairs_bboxes.append(bbox_)  # TODO: remove bbox... not needed
             hairs_polygons.append(polygon_)
             actual_root_count += 1
 
         return actual_root_count, hairs_polygons, hairs_bboxes
-
-    def draw_root_ends(self, line1, line2):
-        start1, start2 = line1[0], line2[0]
-        end1, end2 = line1[-1], line2[-1]
-        start_root_dir = -1 * self.deltas[0]
-        end_root_dir = self.deltas[-1]
-
-        draw_root_end_bezier_curve(self.root_image_bi, start1, start2, start_root_dir)
-        draw_root_end_bezier_curve(self.root_image_bi, end1, end2, end_root_dir)
-        # draw_single_root_end(self.root_image_bi, start1, start2, start_root_dir, thickness_=self.root_width)
-        # draw_single_root_end(self.root_image_bi, end1, end2, end_root_dir, thickness_=self.root_width)
 
     def draw_main_root(self, line1, line2):
         # Convert line points to integer coordinates
@@ -273,42 +246,66 @@ class RootImageGenerator:
         combined_shape = np.concatenate([line1, line2[::-1]])
 
         # Draw and fill the polygon on the binary image
-        cv2.fillPoly(self.root_image_bi, [combined_shape], color=1)
+        cv2.fillPoly(self.root_mask, [combined_shape], color=1)
+
+    def add_root_darker_middle_effect(self, root_hair_image, apply_chane=0.5):
+        if random.random() > apply_chane:
+            return root_hair_image
+
+        white_rgb = np.array((255, 255, 255))
+        color = white_rgb * random.uniform(0.8, 0.99)
+
+        width_list = np.clip(self.offset1_list, 0.5, None)
+        for i, point in enumerate(self.points):
+            radius = np.random.uniform(width_list[i] * 0.43, width_list[i] * 0.6)
+            deform_x = random.uniform(0.8, 1.2)
+            deform_y = random.uniform(0.8, 1.2)
+
+            x, y = point
+            axes = (int(radius * deform_x), int(radius * deform_y))
+
+
+
+            cv2.ellipse(root_hair_image, (x, y), axes, 0, 0, 360, color, -1)
+
+        return root_hair_image
+
 
     def generate(self, new_shape=None, add_soil=True, add_flare=True, add_blurr=True):
 
         line1, line2 = self.generate_parallel_lines()
         self.draw_main_root(line1, line2)
 
-        root_poly, root_bbox = get_polygons_bbox_from_bin_image(self.root_image_bi)
+        root_poly, root_bbox = get_polygons_bbox_from_bin_image(self.root_mask)
 
-        hairs_image_bi = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
+        hair_num, hairs_poly, hairs_bbox = self.draw_hairs()
 
-        hair_num, hairs_poly, hairs_bbox = self.draw_hairs(hairs_image_bi)
-
-        merged_image = np.logical_or(self.root_image_bi, hairs_image_bi).astype(np.uint8)
+        merged_mask = np.logical_or(self.root_mask, self.hairs_mask).astype(np.uint8)
+        gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
+        color_image = cv2.cvtColor((merged_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
+        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
 
         if add_soil:
             soil_image = gen_soil_image((self.img_width, self.img_height),
                                         soil_images_folder_path='soilGeneration/background_resources')
-            alpha_gradient = generate_random_alpha_gradient((self.img_height, self.img_width), non_linear=True)
-            merged_image = apply_alpha_blending(merged_image, soil_image, alpha_gradient)
 
-            if add_flare and random.random() < 0.5:
-                merged_image = add_light_effect(merged_image)
+            merged_mask = apply_alpha_blending(root_hair_image, soil_image)
+
+            if add_flare and random.random() < 1:
+                merged_mask = add_light_effect(merged_mask)
             if add_blurr:
                 blur_strength = np.random.choice([5, 7, 11, 15, 31])
-                merged_image = cv2.GaussianBlur(merged_image, (blur_strength, blur_strength), 0)
+                merged_mask = cv2.GaussianBlur(merged_mask, (blur_strength, blur_strength), 0)
 
         if new_shape is not None:
-            merged_image = cv2.resize(merged_image, new_shape, interpolation=cv2.INTER_AREA)
-            # self.root_image_bi = resize(merged_image, new_shape)
-            hairs_image_bi = cv2.resize(hairs_image_bi, new_shape, interpolation=cv2.INTER_AREA)
+            merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
+            # self.root_mask = resize(merged_mask, new_shape)
+            self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
-        output = {
-            "full image": merged_image,
-            "only roots": merged_image,
-            "only hairs": hairs_image_bi,
+        output = {  # TODO: remove useless outputs
+            "full image": merged_mask,
+            "only roots": merged_mask,
+            "only hairs": self.hairs_mask,
             "hair count": hair_num,
             "hairs polygons": hairs_poly,
             "hairs bbox": hairs_bbox,
