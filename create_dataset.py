@@ -131,7 +131,7 @@ def plot_with_annotations(properties):
     hairs_bbox = properties["hairs bbox"]
     root_bbox = properties["Main root bbox"]
     root_polygon = properties["Main root polygon"]
-    font_size_ = None
+    font_size_ = 20
     linewidth_poly = 8
     linewidth_bbox = 5
 
@@ -334,5 +334,12 @@ if __name__ == '__main__':
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # run_coco(possibilities)  # doesnt seem to work right
-    # show_images()
-    run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
+    show_images()
+    # run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
+
+    # 12/10/24
+    # It seems that the model performance is worse for roots that are grayer or slightly transparent.
+    # also I fill like all the root segmentation has the same width, look into it.
+    # TODO: add some random gray-scale for root drawing ...CHECK
+    # TODO: add some random transparency for root drawing ...CHECK
+    # TODO: add some random slight rotation in an image
