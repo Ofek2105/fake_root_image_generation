@@ -318,12 +318,12 @@ if __name__ == '__main__':
     possibilities = {
         "root_width": [20, 30, 40],
         "root_width_std": [2, 3],
-        "hair_length": [20, 40, 60, 100],
+        "hair_length": [20, 40, 80, 100, 130],
         "hair_length_std": [5, 50],
         "hair_thickness": [5, 8],
         "hair_thickness_std": [2],
         "hair_craziness": [0.9, 0.98],  # 0 or 1
-        "hair_density": [0.15, 0.20],
+        "hair_density": [0.15, 0.20, 0.05],
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": [0.20],
@@ -334,12 +334,13 @@ if __name__ == '__main__':
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # run_coco(possibilities)  # doesnt seem to work right
-    show_images()
-    # run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
+    # show_images()
+    run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
 
     # 12/10/24
     # It seems that the model performance is worse for roots that are grayer or slightly transparent.
     # also I fill like all the root segmentation has the same width, look into it.
     # TODO: add some random gray-scale for root drawing ...CHECK
     # TODO: add some random transparency for root drawing ...CHECK
-    # TODO: add some random slight rotation in an image
+    # TODO: add some random slight swirl in an image
+    # TODO: add channel jitter ...CHECK
