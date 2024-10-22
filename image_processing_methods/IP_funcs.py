@@ -1,9 +1,7 @@
 import numpy as np
 import cv2
 import rdp
-from PIL import Image
-import io
-import Augmentor
+
 
 def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     result = bin_image.copy()
@@ -43,41 +41,47 @@ def generate_random_alpha_gradient(img_size, non_linear=True, visibility=0.8, ra
     height, width = img_size
     alpha = np.zeros((height, width), dtype=np.float32)
 
-    # Randomize direction, frequency, and phase
     frequency = np.random.uniform(0.5, 2.0)  # Random frequency multiplier
     phase_shift = np.random.uniform(0, np.pi)  # Random phase shift
     x_direction = np.random.choice([-1, 1])  # Random direction in x-axis
     y_direction = np.random.choice([-1, 1])  # Random direction in y-axis
 
-    # Generate a random gradient with opacity variations
-    for i in range(height):
-        for j in range(width):
-            if non_linear:
-                # Apply random frequency, phase, and direction
-                base_value = visibility * (
-                        1 + np.sin(
-                    frequency * (x_direction * i + y_direction * j) / (height + width) * np.pi + phase_shift)
-                )
-            else:
-                base_value = visibility * (i + j) / (height + width)
+    x_indices, y_indices = np.meshgrid(np.arange(width), np.arange(height))
 
-            # Add some random variations for a more natural effect
-            random_variation = np.random.uniform(-randomness, randomness)
-            alpha[i, j] = 1 - base_value + random_variation
+    if non_linear:
+        base_value = visibility * (
+            1 + np.sin(
+                frequency * (x_direction * y_indices + y_direction * x_indices) / (height + width) * np.pi + phase_shift
+            )
+        )
+    else:
+        base_value = visibility * (y_indices + x_indices) / (height + width)
+
+    # Add random variations
+    random_variation = np.random.uniform(-randomness, randomness, (height, width))
+    alpha = 1 - base_value + random_variation
 
     return np.clip(alpha, 0.25, 1)
 
 
-def apply_alpha_blending(bin_image, soil_image, alpha):
-    # Ensure both images are of the same size
-    if bin_image.shape[:2] != soil_image.shape[:2]:
-        raise ValueError("Binary image and soil image must be the same size.")
+def customAddWeighted(src1, alpha, src2, beta, gamma=0):
+    # Check if the images have the same size
+    if src1.shape != src2.shape:
+        raise ValueError("Input images must have the same size.")
 
-    bin_mask = bin_image == 1
-    soil_image[bin_mask, :] = (alpha[bin_mask][..., np.newaxis] * soil_image[bin_mask, :] +
-                               (1 - alpha[bin_mask])[..., np.newaxis] * np.array([255, 255, 255])[np.newaxis, ...]).astype(np.uint8)
+    # Perform alpha blending
+    blended_image = np.clip(src1 * alpha[:, :, np.newaxis] + src2 * beta[:, :, np.newaxis] + gamma, 0, 255).astype(
+        np.uint8)
 
-    return soil_image
+    return blended_image
+
+
+def apply_alpha_blending(rgb_image, soil_image):
+    alpha = generate_random_alpha_gradient(rgb_image.shape[:2], non_linear=True)
+
+    blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1-alpha, 0)
+
+    return blended_image
 
 
 def add_light_effect(image, intensity=1.5, spread=0.4):
@@ -94,3 +98,46 @@ def add_light_effect(image, intensity=1.5, spread=0.4):
     brightened_image = cv2.addWeighted(image, 1.0, image * mask * intensity, 0.8, 0)
 
     return np.clip(brightened_image, 0, 255).astype(np.uint8)
+
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    # Define image size and gradient parameters
+    img_size = (200, 200)
+    visibility = 0.8
+    randomness = 0.02
+
+    # Generate a random non-linear alpha gradient
+    alpha_gradient = generate_random_alpha_gradient(img_size, non_linear=True)
+
+    # Plot the generated alpha gradient
+    plt.imshow(alpha_gradient, cmap='gray')
+    plt.colorbar(label='Alpha Value')
+    plt.title('Non-linear Alpha Gradient Effect')
+    plt.show()
+
+    img_size = (200, 200, 3)
+    image = np.full(img_size, 150, dtype=np.uint8)  # Gray image
+
+    # Apply the light effect to the image
+    intensity = 1.5
+    spread = 0.4
+    light_effect_image = add_light_effect(image, intensity=intensity, spread=spread)
+
+    # Plot the original and light-effect images side by side
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+    axes[0].imshow(image)
+    axes[0].set_title('Original Image')
+    axes[0].axis('off')
+
+    axes[1].imshow(light_effect_image)
+    axes[1].set_title('Image with Light Effect')
+    axes[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
