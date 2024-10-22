@@ -49,7 +49,7 @@ def calculate_metrics(predictions, ground_truth, smoothing_window):
 
 """
       "full image": merged_image,
-      "only roots": root_image_bi,
+      "only roots": root_mask,
       "only hairs": hairs_image_bi,
       "hair count": hair_num,
       "hairs polygons": hairs_poly,
