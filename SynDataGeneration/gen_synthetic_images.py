@@ -309,7 +309,7 @@ class RootImageGenerator:
         if new_shape is not None:
             merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
             # self.root_mask = resize(merged_mask, new_shape)
-            self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
+            # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
         output = {  # TODO: remove useless outputs
             "full image": merged_mask,
