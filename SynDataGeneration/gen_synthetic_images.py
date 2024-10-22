@@ -3,7 +3,11 @@ import random
 
 from image_processing_methods.IP_funcs import (
     apply_alpha_blending,
-    add_light_effect)
+    add_light_effect,
+    apply_motion_blur,
+    add_channel_noise,
+    apply_random_vortex_blur
+)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -252,24 +256,25 @@ class RootImageGenerator:
         if random.random() > apply_chane:
             return root_hair_image
 
-        white_rgb = np.array((255, 255, 255))
-        color = white_rgb * random.uniform(0.8, 0.99)
+        base_intensity = np.max(root_hair_image)
+        base_color = np.array((base_intensity, base_intensity, base_intensity))
+        color = base_color * random.uniform(0.8, 0.99)
 
         width_list = np.clip(self.offset1_list, 0.5, None)
         for i, point in enumerate(self.points):
+            if i % 2 == 0:
+                continue
+
             radius = np.random.uniform(width_list[i] * 0.43, width_list[i] * 0.6)
             deform_x = random.uniform(0.8, 1.2)
             deform_y = random.uniform(0.8, 1.2)
 
             x, y = point
             axes = (int(radius * deform_x), int(radius * deform_y))
-
-
-
+            color = color + np.random.normal(0, 1)
             cv2.ellipse(root_hair_image, (x, y), axes, 0, 0, 360, color, -1)
 
         return root_hair_image
-
 
     def generate(self, new_shape=None, add_soil=True, add_flare=True, add_blurr=True):
 
@@ -284,6 +289,7 @@ class RootImageGenerator:
         gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
         color_image = cv2.cvtColor((merged_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
         root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
+        root_hair_image = add_channel_noise(root_hair_image)
 
         if add_soil:
             soil_image = gen_soil_image((self.img_width, self.img_height),
@@ -293,9 +299,12 @@ class RootImageGenerator:
 
             if add_flare and random.random() < 1:
                 merged_mask = add_light_effect(merged_mask)
-            if add_blurr:
-                blur_strength = np.random.choice([5, 7, 11, 15, 31])
-                merged_mask = cv2.GaussianBlur(merged_mask, (blur_strength, blur_strength), 0)
+            # if add_blurr:
+                # blur_strength = np.random.choice([5, 7, 11, 15, 31])
+                # merged_mask = cv2.GaussianBlur(merged_mask, (blur_strength, blur_strength), 0)
+            if True:  # add motion blurr
+                merged_mask = apply_motion_blur(merged_mask, apply_chane=0.7)
+                merged_mask = apply_random_vortex_blur(merged_mask, apply_chane=0.7)
 
         if new_shape is not None:
             merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
