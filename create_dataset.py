@@ -237,7 +237,7 @@ def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
         root_image_class = RootImageGenerator(main_root_points, **params)
 
         for _ in range(images_per_root):
-            properties = root_image_class.generate(new_shape=(320, 320))
+            properties = root_image_class.generate()
             _, filename = save_binary_image(properties["full image"], "dataset\\images", params,
                                             annotate_specific_params_yolo.counter_id,
                                             hair_count=properties["hair count"])
@@ -342,5 +342,10 @@ if __name__ == '__main__':
     # also I fill like all the root segmentation has the same width, look into it.
     # TODO: add some random gray-scale for root drawing ...CHECK
     # TODO: add some random transparency for root drawing ...CHECK
-    # TODO: add some random slight swirl in an image
+    # TODO: add some random slight swirl in an image ... CHECK
     # TODO: add channel jitter ...CHECK
+
+    #   26/10/24
+    # Removed swirl effect so it won't hurt the annotations
+    # we will save images in higher resolution 960 by 960
+
