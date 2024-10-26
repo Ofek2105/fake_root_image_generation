@@ -91,7 +91,11 @@ def add_channel_noise(image, stddev=5):
     return noisy_image
 
 
-def add_light_effect(image, intensity=1.5, spread=0.4):
+def add_light_effect(image, intensity=1.5, spread=0.4, apply_chane=0.5):
+
+    if random.random() > apply_chane:
+        return image
+
     height, width, channels = image.shape
 
     gradient = np.linspace(1, 0, height).reshape(height, 1)
@@ -146,6 +150,14 @@ def apply_random_vortex_blur(img, strength=0.0005, apply_chane=0.5):
     for i in range(3):
         vortex_blurred[..., i] = cv2.remap(img[..., i], new_x, new_y, interpolation=cv2.INTER_LINEAR)
     return vortex_blurred
+
+
+def apply_gaussian_blurr(img, apply_chane=0.5):
+    if random.random() > apply_chane:
+        return img
+
+    blur_strength = np.random.choice([5, 7, 11, 15, 31])
+    return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
 
 
 if __name__ == "__main__":
