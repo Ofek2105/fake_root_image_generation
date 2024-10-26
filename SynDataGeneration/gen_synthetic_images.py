@@ -6,7 +6,7 @@ from image_processing_methods.IP_funcs import (
     add_light_effect,
     apply_motion_blur,
     add_channel_noise,
-    apply_random_vortex_blur
+    apply_gaussian_blurr
 )
 
 import numpy as np
@@ -297,17 +297,14 @@ class RootImageGenerator:
 
             merged_mask = apply_alpha_blending(root_hair_image, soil_image)
 
-            if add_flare and random.random() < 1:
-                merged_mask = add_light_effect(merged_mask)
-            # if add_blurr:
-                # blur_strength = np.random.choice([5, 7, 11, 15, 31])
-                # merged_mask = cv2.GaussianBlur(merged_mask, (blur_strength, blur_strength), 0)
-            if True:  # add motion blurr
-                merged_mask = apply_motion_blur(merged_mask, apply_chane=0.7)
-                merged_mask = apply_random_vortex_blur(merged_mask, apply_chane=0.7)
+            if add_flare:
+                merged_mask = add_light_effect(merged_mask, apply_chane=1)
 
-        if new_shape is not None:
-            merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
+            merged_mask = apply_motion_blur(merged_mask, apply_chane=0.2)
+            merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.92)
+
+        # if new_shape is not None:
+        #     merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
             # self.root_mask = resize(merged_mask, new_shape)
             # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
