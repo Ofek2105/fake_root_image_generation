@@ -290,14 +290,14 @@ def show_images():
     N = 50
 
     params = {
-        "root_width": 30,
-        "root_width_std": 2,
-        "hair_length": 50,
-        "hair_length_std": 40,
-        "hair_thickness": 5,
+        "root_width": 20,
+        "root_width_std": 3,
+        "hair_length": 3,
+        "hair_length_std": 5,
+        "hair_thickness": 2,
         "hair_thickness_std": 2,
         "hair_craziness": 0.90,  # 0 or 1
-        "hair_density": 0.2,
+        "hair_density": 0.5,
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": 0.20,
@@ -316,14 +316,14 @@ def show_images():
 if __name__ == '__main__':
 
     possibilities = {
-        "root_width": [20, 30, 40],
+        "root_width": [10, 20],
         "root_width_std": [2, 3],
-        "hair_length": [20, 40, 80, 100, 130],
+        "hair_length": [3, 10, 40, 130],
         "hair_length_std": [5, 50],
-        "hair_thickness": [5, 8],
+        "hair_thickness": [2],
         "hair_thickness_std": [2],
         "hair_craziness": [0.9, 0.98],  # 0 or 1
-        "hair_density": [0.15, 0.20, 0.05],
+        "hair_density": [0.15, 0.35, 0.5],
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": [0.20],
@@ -334,8 +334,8 @@ if __name__ == '__main__':
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # run_coco(possibilities)  # doesnt seem to work right
-    # show_images()
-    run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
+    show_images()
+    # run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
 
     # 12/10/24
     # It seems that the model performance is worse for roots that are grayer or slightly transparent.
