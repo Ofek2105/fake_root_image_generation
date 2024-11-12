@@ -18,7 +18,7 @@ from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 import cv2
 from soilGeneration.soil_generation import gen_soil_image
-
+from soilGeneration.soil_generation2 import SoilGenerator
 
 def plot_normals_and_deltas_with_matplotlib(image, points, normals, deltas, scale=10):
     """
@@ -258,7 +258,7 @@ class RootImageGenerator:
 
         base_intensity = np.max(root_hair_image)
         base_color = np.array((base_intensity, base_intensity, base_intensity))
-        color = base_color * random.uniform(0.8, 0.99)
+        color = base_color * random.uniform(0.2, 0.99)
 
         width_list = np.clip(self.offset1_list, 0.5, None)
         for i, point in enumerate(self.points):
@@ -285,23 +285,27 @@ class RootImageGenerator:
 
         hair_num, hairs_poly, hairs_bbox = self.draw_hairs()
 
-        merged_mask = np.logical_or(self.root_mask, self.hairs_mask).astype(np.uint8)
+        root_hair_mask = np.logical_or(self.root_mask, self.hairs_mask).astype(np.uint8)
+
         gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
-        color_image = cv2.cvtColor((merged_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
-        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
-        root_hair_image = add_channel_noise(root_hair_image)
+        color_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
+        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=1)
 
-        if add_soil:
-            soil_image = gen_soil_image((self.img_width, self.img_height),
-                                        soil_images_folder_path='soilGeneration/background_resources')
+        # soil_image = gen_soil_image((self.img_width, self.img_height),
+        #                             soil_images_folder_path='soilGeneration/background_resources')
 
-            merged_mask = apply_alpha_blending(root_hair_image, soil_image)
+        soil_gen = SoilGenerator('soilGeneration/background_resources')
+        soil_image = soil_gen.generate_image((self.img_width, self.img_height))
 
-            if add_flare:
-                merged_mask = add_light_effect(merged_mask, apply_chane=1)
+        merged_mask = apply_alpha_blending(root_hair_image, soil_image)
 
-            merged_mask = apply_motion_blur(merged_mask, apply_chane=0.2)
-            merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.92)
+        if add_flare:
+            merged_mask = add_light_effect(merged_mask, apply_chance=1)
+
+        # merged_mask = apply_motion_blur(merged_mask, apply_chane=0.2)
+        merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.8)
+        merged_mask = add_channel_noise(merged_mask, apply_chane=0.8)
+
 
         # if new_shape is not None:
         #     merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
