@@ -84,34 +84,97 @@ def apply_alpha_blending(rgb_image, soil_image):
     return blended_image
 
 
-def add_channel_noise(image, stddev=5):
+def add_channel_noise(image, stddev=5, apply_chane=1.0):
+    if random.random() > apply_chane:
+        return image
 
     noise = np.random.normal(0, stddev, image.shape).astype(np.float32)
     noisy_image = np.clip(image + noise, 0, 255).astype(np.uint8)
     return noisy_image
 
 
-def add_light_effect(image, intensity=1.5, spread=0.4, apply_chane=0.5):
+# def add_light_effect(image, intensity=1.5, spread=0.4, apply_chane=0.5):
+#
+#     if random.random() > apply_chane:
+#         return image
+#
+#     height, width, channels = image.shape
+#
+#     gradient = np.linspace(1, 0, height).reshape(height, 1)
+#     gradient = np.clip(gradient + spread, 0, 1)
+#     mask = np.repeat(gradient, width, axis=1)
+#     mask = np.repeat(mask[:, :, np.newaxis], channels, axis=2)
+#
+#     image = image.astype(np.float32)
+#     mask = mask.astype(np.float32)
+#
+#     brightened_image = cv2.addWeighted(image, 1.0, image * mask * intensity, 0.8, 0)
+#
+#     return np.clip(brightened_image, 0, 255).astype(np.uint8)
 
-    if random.random() > apply_chane:
+
+def add_light_effect(image, min_intensity=0.2, max_intensity=0.5,
+                          min_freq=1, max_freq=3, apply_chance=0.5):
+    """
+    Apply a random directional gradient effect to an image.
+
+    Args:
+        image: Input image (numpy array)
+        min_intensity: Minimum brightness intensity (default: 0.2)
+        max_intensity: Maximum brightness intensity (default: 0.8)
+        min_freq: Minimum frequency multiplier (default: 1)
+        max_freq: Maximum frequency multiplier (default: 3)
+        apply_chance: Probability of applying the effect (default: 0.5)
+
+    Returns:
+        Modified image with gradient effect
+    """
+    if np.random.random() > apply_chance:
         return image
 
     height, width, channels = image.shape
 
-    gradient = np.linspace(1, 0, height).reshape(height, 1)
-    gradient = np.clip(gradient + spread, 0, 1)
-    mask = np.repeat(gradient, width, axis=1)
+    # Random parameters
+    angle = np.random.uniform(0, 360)
+    intensity = np.random.uniform(min_intensity, max_intensity)
+    freq = np.random.uniform(min_freq, max_freq)
+
+    # Create basic gradient along y-axis
+    gradient = np.linspace(0, 1, height) * freq
+    gradient = gradient.reshape(height, 1)
+
+    # Create coordinate grid
+    y, x = np.mgrid[0:height, 0:width]
+
+    # Convert angle to radians
+    theta = np.radians(angle)
+
+    # Rotate coordinates
+    x_rot = x * np.cos(theta) + y * np.sin(theta)
+    y_rot = -x * np.sin(theta) + y * np.cos(theta)
+
+    # Normalize coordinates to [0, 1]
+    y_rot = (y_rot - y_rot.min()) / (y_rot.max() - y_rot.min())
+
+    # Create rotated gradient
+    mask = y_rot
+    mask = np.clip(mask, 0, 1)
     mask = np.repeat(mask[:, :, np.newaxis], channels, axis=2)
 
+    # Apply gradient
     image = image.astype(np.float32)
     mask = mask.astype(np.float32)
 
-    brightened_image = cv2.addWeighted(image, 1.0, image * mask * intensity, 0.8, 0)
+    brightened = cv2.addWeighted(
+        image, 1.0,
+        image * mask * intensity, 0.8,
+        0
+    )
 
-    return np.clip(brightened_image, 0, 255).astype(np.uint8)
+    return np.clip(brightened, 0, 255).astype(np.uint8)
 
 
-def apply_motion_blur(image, degree=15, apply_chane=0.5):
+def apply_motion_blur(image, degree=5, apply_chane=0.5):
     if random.random() > apply_chane:
         return image
 
@@ -156,7 +219,7 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
     if random.random() > apply_chane:
         return img
 
-    blur_strength = np.random.choice([5, 7, 11, 15, 31])
+    blur_strength = np.random.choice([5, 7, 11, 15])
     return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
 
 
