@@ -290,18 +290,18 @@ def show_images():
     N = 50
 
     params = {
-        "root_width": 20,
+        "root_width": 10,
         "root_width_std": 3,
-        "hair_length": 3,
-        "hair_length_std": 5,
-        "hair_thickness": 2,
+        "hair_length": 70,
+        "hair_length_std": 30,
+        "hair_thickness": 1,
         "hair_thickness_std": 2,
-        "hair_craziness": 0.90,  # 0 or 1
-        "hair_density": 0.5,
+        "hair_craziness": 0.99,  # 0 or 1
+        "hair_density": 0.1,
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": 0.20,
-        "root_end_percent": 0.03,
+        "root_end_percent": 0.05,
         "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
     }
     # rect_out_ = (50, 50, 250, 250)
@@ -316,18 +316,18 @@ def show_images():
 if __name__ == '__main__':
 
     possibilities = {
-        "root_width": [10, 20],
-        "root_width_std": [2, 3],
-        "hair_length": [3, 10, 40, 130],
-        "hair_length_std": [5, 50],
-        "hair_thickness": [2],
+        "root_width": [25, 15, 10],
+        "root_width_std": [1, 3],
+        "hair_length": [3, 20, 70],
+        "hair_length_std": [30],
+        "hair_thickness": [1, 1, 2],
         "hair_thickness_std": [2],
-        "hair_craziness": [0.9, 0.98],  # 0 or 1
-        "hair_density": [0.15, 0.35, 0.5],
+        "hair_craziness": [0.9, 0.99, 0.999],  # 0 or 1
+        "hair_density": [0.3, 0.1, 0.2],
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": [0.20],
-        "root_end_percent": [0.03, 0.50],
+        "root_end_percent": [0.10],
         "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
     }
     n_main_root = 10
