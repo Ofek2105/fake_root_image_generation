@@ -16,7 +16,7 @@ from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve_old
 from SynDataGeneration.my_bezier_curve import draw_root_end_bezier_curve, draw_hair_random_walk
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 import cv2
-from soilGeneration.perlin_playground import SoilTextureGenerator
+from soilGeneration.soil_generation_perlin import SoilTextureGenerator
 from soilGeneration.soil_generation2 import SoilGenerator
 import rdp
 
