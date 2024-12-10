@@ -3,6 +3,7 @@ import cv2
 import rdp
 import random
 
+
 def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     result = bin_image.copy()
     if neg_mask is not None:
@@ -16,16 +17,16 @@ def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     contours, _ = cv2.findContours(dilated_result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
         max_contour = max(contours, key=cv2.contourArea)
-        contour_points = np.squeeze(max_contour).astype(np.float32)
+        contour_points = np.squeeze(max_contour)
 
         if contour_points.ndim == 1:  # Handle the case where contour is a single point
             contour_points = np.expand_dims(contour_points, axis=0)
 
-        contour_points[:, 0] = contour_points[:, 0] / bin_image.shape[0]
-        contour_points[:, 1] = contour_points[:, 1] / bin_image.shape[1]
+        # contour_points[:, 0] = contour_points[:, 0] / bin_image.shape[0]
+        # contour_points[:, 1] = contour_points[:, 1] / bin_image.shape[1]
 
         # Simplify the contour using RDP
-        keep = rdp.rdp(contour_points.tolist(), epsilon=1e-3, algo="iter", return_mask=True)
+        keep = rdp.rdp(contour_points.tolist(), epsilon=1, algo="iter", return_mask=True)
         polygon_points = contour_points[keep].flatten().tolist()
 
         # Calculate bounding box
@@ -41,7 +42,7 @@ def generate_random_alpha_gradient(img_size, non_linear=True, visibility=0.8, ra
     height, width = img_size
     alpha = np.zeros((height, width), dtype=np.float32)
 
-    frequency = np.random.uniform(0.5, 2.0)  # Random frequency multiplier
+    frequency = np.random.uniform(0.5, 1)  # Random frequency multiplier
     phase_shift = np.random.uniform(0, np.pi)  # Random phase shift
     x_direction = np.random.choice([-1, 1])  # Random direction in x-axis
     y_direction = np.random.choice([-1, 1])  # Random direction in y-axis
@@ -84,6 +85,18 @@ def apply_alpha_blending(rgb_image, soil_image):
     return blended_image
 
 
+def back_for_ground_blending(rgb_image, soil_image):
+    if rgb_image.shape != soil_image.shape:
+        raise ValueError("Foreground and background images must have the same dimensions.")
+
+    gray_foreground = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(gray_foreground, 1, 255, cv2.THRESH_BINARY)
+    mask = cv2.GaussianBlur(mask, (21, 21), 10) / 255.0
+    mask = np.stack([mask] * 3, axis=-1)
+    blended = (rgb_image * mask + soil_image * (1 - mask)).astype(np.uint8)
+    return blended
+
+
 def add_channel_noise(image, stddev=5, apply_chane=1.0):
     if random.random() > apply_chane:
         return image
@@ -93,9 +106,9 @@ def add_channel_noise(image, stddev=5, apply_chane=1.0):
     return noisy_image
 
 
-# def add_light_effect(image, intensity=1.5, spread=0.4, apply_chane=0.5):
+# def add_light_effect(image, intensity=1.5, spread=0.4, apply_chance=0.5):
 #
-#     if random.random() > apply_chane:
+#     if random.random() > apply_chance:
 #         return image
 #
 #     height, width, channels = image.shape
@@ -113,8 +126,8 @@ def add_channel_noise(image, stddev=5, apply_chane=1.0):
 #     return np.clip(brightened_image, 0, 255).astype(np.uint8)
 
 
-def add_light_effect(image, min_intensity=0.2, max_intensity=0.5,
-                          min_freq=1, max_freq=3, apply_chance=0.5):
+def add_light_effect(image, min_intensity=0.2, max_intensity=1.8,
+                     min_freq=0.2, max_freq=2, apply_chance=0.5):
     """
     Apply a random directional gradient effect to an image.
 
@@ -167,10 +180,11 @@ def add_light_effect(image, min_intensity=0.2, max_intensity=0.5,
 
     brightened = cv2.addWeighted(
         image, 1.0,
-        image * mask * intensity, 0.8,
+        image * mask * intensity, 1,
         0
     )
 
+    return (brightened / np.max(brightened) * 255).astype(np.uint8)
     return np.clip(brightened, 0, 255).astype(np.uint8)
 
 
@@ -202,7 +216,7 @@ def apply_random_vortex_blur(img, strength=0.0005, apply_chane=0.5):
     y, x = np.indices((h, w))
     dx = x - cx
     dy = y - cy
-    distance = np.sqrt(dx**2 + dy**2)
+    distance = np.sqrt(dx ** 2 + dy ** 2)
     angle = np.arctan2(dy, dx)
     angle_distorted = angle + strength * distance
     new_x = cx + distance * np.cos(angle_distorted)
@@ -219,45 +233,47 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
     if random.random() > apply_chane:
         return img
 
-    blur_strength = np.random.choice([5, 7, 11, 15])
+    blur_strength = np.random.choice([5, 7, 11, 11, 15, 31])
+    print(blur_strength)
     return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    # Define image size and gradient parameters
-    img_size = (200, 200)
-    visibility = 0.8
-    randomness = 0.02
+    for _ in range(30):
+        # Define image size and gradient parameters
+        img_size = (200, 200)
+        visibility = 0.8
+        randomness = 0.02
 
-    # Generate a random non-linear alpha gradient
-    alpha_gradient = generate_random_alpha_gradient(img_size, non_linear=True)
+        # Generate a random non-linear alpha gradient
+        alpha_gradient = generate_random_alpha_gradient(img_size, non_linear=True)
 
-    # Plot the generated alpha gradient
-    plt.imshow(alpha_gradient, cmap='gray')
-    plt.colorbar(label='Alpha Value')
-    plt.title('Non-linear Alpha Gradient Effect')
-    plt.show()
+        # Plot the generated alpha gradient
+        plt.imshow(alpha_gradient, cmap='gray')
+        plt.colorbar(label='Alpha Value')
+        plt.title('Non-linear Alpha Gradient Effect')
+        plt.show()
 
-    img_size = (200, 200, 3)
-    image = np.full(img_size, 150, dtype=np.uint8)  # Gray image
+        img_size = (200, 200, 3)
+        image = np.full(img_size, 150, dtype=np.uint8)  # Gray image
 
-    # Apply the light effect to the image
-    intensity = 1.5
-    spread = 0.4
-    light_effect_image = add_light_effect(image, intensity=intensity, spread=spread)
+        # Apply the light effect to the image
+        intensity = 1.5
+        spread = 0.4
+        light_effect_image = add_light_effect(image, apply_chance=1)
 
-    # Plot the original and light-effect images side by side
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+        # Plot the original and light-effect images side by side
+        fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    axes[0].imshow(image)
-    axes[0].set_title('Original Image')
-    axes[0].axis('off')
+        axes[0].imshow(image)
+        axes[0].set_title('Original Image')
+        axes[0].axis('off')
 
-    axes[1].imshow(light_effect_image)
-    axes[1].set_title('Image with Light Effect')
-    axes[1].axis('off')
+        axes[1].imshow(light_effect_image)
+        axes[1].set_title('Image with Light Effect')
+        axes[1].axis('off')
 
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
