@@ -119,7 +119,7 @@ def construct_image(images, image_size, max_patches=10, min_patch_size=(400, 400
     return base_image
 
 
-def generate_and_save(images, output_size, output_folder="generated_backgrounds", num_generated=10, max_images=3):
+def generate_and_save(images, output_size, output_folder="generated_backgrounds", num_generated=10):
 
     for i in range(num_generated):
         new_image = construct_image(images, output_size)
@@ -142,4 +142,4 @@ if __name__ == "__main__":
     image_folder = "background_resources"
     soil_images = load_images(image_folder)
 
-    generate_and_save(soil_images, output_size=(960, 960), num_generated=10, max_images=5)
+    generate_and_save(soil_images, output_size=(960, 960), num_generated=10)
