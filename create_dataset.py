@@ -3,10 +3,10 @@ import numpy as np
 from PIL import Image
 
 from SynDataGeneration.gen_main_root_points import generator_main_roots
-from SynDataGeneration.gen_synthetic_images import RootImageGenerator, plot_bin_root_hairs
+from SynDataGeneration.gen_synthetic_images import RootImageGenerator
+from coco_json_initialization import COCODatasetGenerator
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from coco_json_initialization import CocoDataset
 import itertools
 from tqdm import tqdm
 from shapely.geometry import Polygon
@@ -14,65 +14,65 @@ import pathlib
 import time
 
 
-def plot_fake_and_pred_images(fake_im_properties, contours, file_path=None):
-    full_image = fake_im_properties["full image"]
-    hairs_polygons = fake_im_properties["hairs polygons"]
-    hairs_bbox = fake_im_properties["hairs bbox"]
-    root_bbox = fake_im_properties["Main root bbox"]
-    root_polygon = fake_im_properties["Main root polygon"]
-    font_size_ = 20
-    linewidth_poly = 8
-    linewidth_bbox = 5
-    n_plots = 3 if contours is not None else 2
-
-    # Create a figure and subplots (now three subplots)
-    fig, ax = plt.subplots(1, n_plots, figsize=(90, 30))
-    ax[0].imshow(full_image, cmap='gray')
-    ax[0].set_title("Synthetic root", size=font_size_)
-
-    ax[1].imshow(full_image, cmap='gray')
-    ax[1].set_title("Annotated Synthetic root", size=font_size_)
-
-    root_poly_points = scale_up_polygon(root_polygon, full_image.shape)
-    ax[1].plot(root_poly_points[:, 0], root_poly_points[:, 1], 'g-',
-               linewidth=linewidth_poly, label='Main Root polygon')
-
-    root_bbox = scale_up_bbox(root_bbox, full_image.shape)
-    rect = patches.Rectangle((root_bbox[0], root_bbox[1]), root_bbox[2], root_bbox[3],
-                             linewidth=linewidth_bbox, edgecolor='purple',
-                             facecolor='none', label='Main Root BBox')
-    ax[1].add_patch(rect)
-
-    # Plot bounding boxes for hairs
-    for bbox in hairs_bbox:
-        hair_bbox = scale_up_bbox(bbox, full_image.shape)
-        rect = patches.Rectangle((hair_bbox[0], hair_bbox[1]), hair_bbox[2], hair_bbox[3],
-                                 linewidth=linewidth_bbox, edgecolor='r', facecolor='none')
-        ax[1].add_patch(rect)
-
-    # Plot polygons for hairs (each polygon is a sequence of x, y coordinates)
-    for polygon in hairs_polygons:
-        poly_points = scale_up_polygon(polygon, full_image.shape)
-        ax[1].plot(poly_points[:, 0], poly_points[:, 1], color='blue',
-                   linewidth=3)
-
-    # Draw contours on the third axis
-    if contours is not None:
-        ax[2].imshow(full_image, cmap='gray')
-        ax[2].set_title("Found hair tips", size=font_size_)
-        ax[2].imshow(full_image, cmap='gray')
-        for contour in contours:
-            contour = contour.reshape(-1, 2)  # Reshape to (n, 2)
-            ax[2].plot(contour[:, 0], contour[:, 1], color='yellow', linewidth=3)
-
-        ax[0].set_axis_off()
-        ax[1].set_axis_off()
-        ax[2].set_axis_off()
-
-    if file_path is not None:
-        plt.savefig(file_path, bbox_inches='tight')
-    else:
-        plt.show()
+# def plot_fake_and_pred_images(fake_im_properties, contours, file_path=None):
+#     full_image = fake_im_properties["full image"]
+#     hairs_polygons = fake_im_properties["hairs polygons"]
+#     hairs_bbox = fake_im_properties["hairs bbox"]
+#     root_bbox = fake_im_properties["Main root bbox"]
+#     root_polygon = fake_im_properties["Main root polygon"]
+#     font_size_ = 20
+#     linewidth_poly = 8
+#     linewidth_bbox = 5
+#     n_plots = 3 if contours is not None else 2
+#
+#     # Create a figure and subplots (now three subplots)
+#     fig, ax = plt.subplots(1, n_plots, figsize=(90, 30))
+#     ax[0].imshow(full_image, cmap='gray')
+#     ax[0].set_title("Synthetic root", size=font_size_)
+#
+#     ax[1].imshow(full_image, cmap='gray')
+#     ax[1].set_title("Annotated Synthetic root", size=font_size_)
+#
+#     root_poly_points = scale_up_polygon(root_polygon, full_image.shape)
+#     ax[1].plot(root_poly_points[:, 0], root_poly_points[:, 1], 'g-',
+#                linewidth=linewidth_poly, label='Main Root polygon')
+#
+#     root_bbox = scale_up_bbox(root_bbox, full_image.shape)
+#     rect = patches.Rectangle((root_bbox[0], root_bbox[1]), root_bbox[2], root_bbox[3],
+#                              linewidth=linewidth_bbox, edgecolor='purple',
+#                              facecolor='none', label='Main Root BBox')
+#     ax[1].add_patch(rect)
+#
+#     # Plot bounding boxes for hairs
+#     for bbox in hairs_bbox:
+#         hair_bbox = scale_up_bbox(bbox, full_image.shape)
+#         rect = patches.Rectangle((hair_bbox[0], hair_bbox[1]), hair_bbox[2], hair_bbox[3],
+#                                  linewidth=linewidth_bbox, edgecolor='r', facecolor='none')
+#         ax[1].add_patch(rect)
+#
+#     # Plot polygons for hairs (each polygon is a sequence of x, y coordinates)
+#     for polygon in hairs_polygons:
+#         poly_points = scale_up_polygon(polygon, full_image.shape)
+#         ax[1].plot(poly_points[:, 0], poly_points[:, 1], color='blue',
+#                    linewidth=3)
+#
+#     # Draw contours on the third axis
+#     if contours is not None:
+#         ax[2].imshow(full_image, cmap='gray')
+#         ax[2].set_title("Found hair tips", size=font_size_)
+#         ax[2].imshow(full_image, cmap='gray')
+#         for contour in contours:
+#             contour = contour.reshape(-1, 2)  # Reshape to (n, 2)
+#             ax[2].plot(contour[:, 0], contour[:, 1], color='yellow', linewidth=3)
+#
+#         ax[0].set_axis_off()
+#         ax[1].set_axis_off()
+#         ax[2].set_axis_off()
+#
+#     if file_path is not None:
+#         plt.savefig(file_path, bbox_inches='tight')
+#     else:
+#         plt.show()
 
 
 def save_binary_image(binary_image, base_path, params, image_id, hair_count=None):
@@ -130,10 +130,10 @@ def plot_with_annotations(properties):
     hairs_polygons = properties["hairs polygons"]
     hairs_bbox = properties["hairs bbox"]
     root_bbox = properties["Main root bbox"]
-    root_polygon = properties["Main root polygon"]
+    root_polygon = np.array(properties["Main root polygon"]).reshape((-1, 2))
     font_size_ = 20
-    linewidth_poly = 8
-    linewidth_bbox = 5
+    linewidth_poly = 1
+    linewidth_bbox = 1
 
     # Create a figure and a subplot
     fig, ax = plt.subplots(1, 2)
@@ -142,11 +142,12 @@ def plot_with_annotations(properties):
     ax[0].set_title("Synthetic root", size=font_size_)
     ax[1].set_title("Annotated Synthetic root", size=font_size_)
 
-    root_poly_points = scale_up_polygon(root_polygon, full_image.shape)
-    ax[1].plot(root_poly_points[:, 0], root_poly_points[:, 1], 'g-',
+    # root_poly_points = scale_up_polygon(root_polygon, full_image.shape)
+
+    ax[1].plot(root_polygon[:, 0], root_polygon[:, 1], 'g-',
                linewidth=linewidth_poly, label='Main Root polygon')
 
-    root_bbox = scale_up_bbox(root_bbox, full_image.shape)
+    # root_bbox = scale_up_bbox(root_bbox, full_image.shape)
     rect = patches.Rectangle((root_bbox[0], root_bbox[1]), root_bbox[2], root_bbox[3],
                              linewidth=linewidth_bbox, edgecolor='purple',
                              facecolor='none', label='Main Root BBox')
@@ -154,68 +155,21 @@ def plot_with_annotations(properties):
 
     # Plot bounding boxes for hairs
     for bbox in hairs_bbox:
-        hair_bbox = scale_up_bbox(bbox, full_image.shape)
-        rect = patches.Rectangle((hair_bbox[0], hair_bbox[1]), hair_bbox[2], hair_bbox[3],
+        # hair_bbox = scale_up_bbox(bbox, full_image.shape)
+        rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3],
                                  linewidth=linewidth_bbox, edgecolor='r', facecolor='none')
         ax[1].add_patch(rect)
 
     # Plot polygons for hairs (each polygon is a sequence of x, y coordinates)
     for polygon in hairs_polygons:
-        poly_points = scale_up_polygon(polygon, full_image.shape)
-        ax[1].plot(poly_points[:, 0], poly_points[:, 1], color='blue',
+        # poly_points = scale_up_polygon(polygon, full_image.shape)
+        polygon_s = np.array(polygon).reshape((-1, 2))
+        ax[1].plot(polygon_s[:, 0], polygon_s[:, 1], color='blue',
                    linewidth=3)
 
     ax[0].set_axis_off()
     ax[1].set_axis_off()
     plt.show()
-
-
-def add_annotations_to_coco(coco_dataset, image_id, properties):
-    coco_dataset.add_annotation(
-        image_id=image_id,
-        category_id=1,  # Assuming category_id for root is 1
-        bbox=properties["Main root bbox"],
-        segmentation=[properties["Main root polygon"]],
-        area=calculate_polygon_area(properties["Main root polygon"], image_shape=properties["full image"].shape)
-    )
-
-    for i in range(properties["hair count"]):
-        coco_dataset.add_annotation(
-            image_id=image_id,
-            category_id=0,  # Assuming category_id for hair is 0
-            bbox=properties["hairs bbox"][i],
-            segmentation=[properties["hairs polygons"][i]],
-            area=calculate_polygon_area(properties["hairs polygons"][i], image_shape=properties["full image"].shape)
-        )
-
-
-def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params):
-    param_id = 0
-    for main_root_points in generator_main_roots(n_unique_roots):
-        root_image_class = RootImageGenerator(main_root_points, **params)
-
-        for _ in range(images_per_root):
-            properties = root_image_class.generate()
-            full_path, _ = save_binary_image(properties["full image"], "dataset\\images", params, param_id,
-                                             hair_count=properties["hair count"])
-            im_id = coco.add_image(file_path=full_path, width=params["img_width"], height=params["img_height"])
-            add_annotations_to_coco(coco, im_id, properties)
-            param_id += 1
-
-
-def run_coco(all_params, seed=None, plot=False):
-    anno_per_root = 3
-    roots_per_anno = 3
-    iteration_num = count_iterations(all_params)
-
-    coco = CocoDataset()
-    coco.add_category(category_id=0, name="hair", supercategory="plant")
-    coco.add_category(category_id=1, name="root", supercategory="plant")
-
-    for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
-        annotate_specific_params_coco(coco, images_per_root=anno_per_root,
-                                      n_unique_roots=roots_per_anno, params=params)
-    coco.save_to_file('coco_format.json')
 
 
 def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
@@ -231,8 +185,37 @@ def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
             f.write(row)
 
 
+def annotate_specific_image_coco(coco, properties):
+    file_name = f"{str(time.time()).replace('.', '')}_{coco.image_id}.jpeg"
+    file_path = os.path.join(coco.output_dir, file_name)
+    height, width, _ = properties["full image"].shape
+    im_id = coco.add_image(file_name, width=width, height=height)
+
+    image = Image.fromarray(properties["full image"])
+    image.save(file_path, quality=90)
+
+    if len(properties["Main root polygon"]) != 0:
+        coco.add_annotation(image_id=im_id, category_id=1, segmentation=properties["Main root polygon"])  # root
+
+    for polygon in properties["hairs polygons"]:
+        coco.add_annotation(image_id=im_id, category_id=0, segmentation=polygon)  # hair
+
+
+def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params):
+    rect_out_ = (
+        params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
+
+    for main_root_points in generator_main_roots(n_unique_roots, rect_out_):
+
+        for _ in range(images_per_root):
+            root_image_class = RootImageGenerator(main_root_points, **params)
+            properties = root_image_class.generate()
+            annotate_specific_image_coco(coco, properties)
+
+
 def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
-    rect_out_ = (params["img_width"]*0.1, params["img_height"]*0.1, params["img_width"]*0.9, params["img_height"]*0.9)
+    rect_out_ = (
+        params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
     for main_root_points in generator_main_roots(n_unique_roots, rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
 
@@ -246,14 +229,22 @@ def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
             annotate_specific_params_yolo.counter_id += 1
 
 
-def run_yolo(all_params, n_main_root_=3, hair_gen_per_main_root_=3):
-    iteration_num = count_iterations(all_params)
+def create_dataset(all_params, n_main_root_=3, hair_gen_per_main_root_=3, dataformat="coco"):
+    cocoGen = COCODatasetGenerator('dataset\\')
 
+    iteration_num = count_iterations(all_params)
     annotate_specific_params_yolo.counter_id = 0
 
     for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
-        annotate_specific_params_yolo(images_per_root=hair_gen_per_main_root_,
-                                      n_unique_roots=n_main_root_, params=params)
+        if dataformat == "yolo":
+            raise ("BRO! I changed the code so the polygons and bboxes are absolute values (not between 0 and 1)\n "
+                   "if you want yolo format again you need to change it here so it would work with everything")
+            # annotate_specific_params_yolo(images_per_root=hair_gen_per_main_root_,
+            #                               n_unique_roots=n_main_root_, params=params)
+        if dataformat == "coco":
+            annotate_specific_params_coco(cocoGen, images_per_root=hair_gen_per_main_root_,
+                                          n_unique_roots=n_main_root_, params=params)
+    cocoGen.save_annotations()
 
 
 def generator_combination_dict(possibilities_dict):
@@ -290,14 +281,14 @@ def show_images():
     N = 50
 
     params = {
-        "root_width": 10,
+        "root_width": 40,
         "root_width_std": 3,
         "hair_length": 70,
         "hair_length_std": 30,
-        "hair_thickness": 1,
+        "hair_thickness": 3,
         "hair_thickness_std": 2,
-        "hair_craziness": 0.99,  # 0 or 1
-        "hair_density": 0.1,
+        "hair_craziness": 0.95,  # 0 or 1
+        "hair_density": 0.2,
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": 0.20,
@@ -305,7 +296,8 @@ def show_images():
         "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
     }
     # rect_out_ = (50, 50, 250, 250)
-    rect_out_ = (params["img_width"]*0.1, params["img_height"]*0.1, params["img_width"]*0.9, params["img_height"]*0.9)
+    rect_out_ = (
+        params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
 
     for main_root_points in generator_main_roots(N, rect=rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
@@ -314,7 +306,6 @@ def show_images():
 
 
 if __name__ == '__main__':
-
     possibilities = {
         "root_width": [25, 15, 10],
         "root_width_std": [1, 3],
@@ -328,14 +319,15 @@ if __name__ == '__main__':
         "img_height": 960,
         "root_start_percent": [0.20],
         "root_end_percent": [0.10],
-        "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
+        "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
+        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
     }
+
     n_main_root = 10
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
-    # run_coco(possibilities)  # doesnt seem to work right
     show_images()
-    # run_yolo(possibilities, n_main_root, hair_gen_per_main_root)
+    # create_dataset(possibilities, n_main_root, hair_gen_per_main_root)
 
     # 12/10/24
     # It seems that the model performance is worse for roots that are grayer or slightly transparent.
@@ -349,3 +341,11 @@ if __name__ == '__main__':
     # Removed swirl effect so it won't hurt the annotations
     # we will save images in higher resolution 960 by 960
 
+    # 10/12/2024
+    # * fixed problem where all the hairs didn't got segmented
+    # * added coco support
+    # * images saved as jpeg with quality 90 (used PIL for saving)
+    # * fixed root segmentation problem when root is looping into it self
+    # * root and hairs segmentations requre less points (hairs rdp epsilon of 1; root rdp epsilon of 3)
+    # * added new background method
+    #
