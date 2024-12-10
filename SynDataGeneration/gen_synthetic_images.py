@@ -4,21 +4,21 @@ import random
 from image_processing_methods.IP_funcs import (
     apply_alpha_blending,
     add_light_effect,
-    apply_motion_blur,
+    back_for_ground_blending,
     add_channel_noise,
     apply_gaussian_blurr
 )
 
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage.draw import line as draw_line
+
 from SynDataGeneration.my_bezier_curve import draw_my_thick_bezier_curve_old
 from SynDataGeneration.my_bezier_curve import draw_root_end_bezier_curve, draw_hair_random_walk
-from image_processing_methods.IP_funcs import get_polygons_bbox_from_bin_image
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 import cv2
-from soilGeneration.soil_generation import gen_soil_image
+from soilGeneration.perlin_playground import SoilTextureGenerator
 from soilGeneration.soil_generation2 import SoilGenerator
+import rdp
 
 def plot_normals_and_deltas_with_matplotlib(image, points, normals, deltas, scale=10):
     """
@@ -81,7 +81,26 @@ class RootImageGenerator:
                  hair_thickness=5, hair_thickness_std=1,
                  hair_craziness=0,
                  root_start_percent=0.1, root_end_percent=0.1,
-                 hair_density=0.09, img_width=300, img_height=300):
+                 hair_density=0.09, img_width=300, img_height=300,
+                 background_type="real"):
+        """
+
+        :param root_skele_points:
+        :param hair_type:
+        :param root_width:
+        :param root_width_std:
+        :param hair_length:
+        :param hair_length_std:
+        :param hair_thickness:
+        :param hair_thickness_std:
+        :param hair_craziness:
+        :param root_start_percent:
+        :param root_end_percent:
+        :param hair_density:
+        :param img_width:
+        :param img_height:
+        :param background_type: accepts "real" or "perlin"
+        """
 
         self.points = root_skele_points
         if len(self.points) < 2:
@@ -106,6 +125,8 @@ class RootImageGenerator:
         self.hair_n = int((len(self.points) - self.no_hair_area_start - self.no_hair_area_end) * hair_density)
         self.img_width = img_width
         self.img_height = img_height
+
+        self.background_type = background_type
 
         self.normals, self.deltas = self.compute_normals()
         self.root_mask = np.zeros((self.img_height, self.img_width), dtype=np.uint8)
@@ -252,6 +273,17 @@ class RootImageGenerator:
         # Draw and fill the polygon on the binary image
         cv2.fillPoly(self.root_mask, [combined_shape], color=1)
 
+        keep = rdp.rdp(combined_shape.tolist(), epsilon=3, algo="iter", return_mask=True)
+        polygon_points = combined_shape[keep].flatten().tolist()
+
+        # Calculate bounding box
+        min_x, min_y = np.min(combined_shape, axis=0)
+        max_x, max_y = np.max(combined_shape, axis=0)
+        bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
+
+        return polygon_points, bbox
+
+
     def add_root_darker_middle_effect(self, root_hair_image, apply_chane=0.5):
         if random.random() > apply_chane:
             return root_hair_image
@@ -279,9 +311,9 @@ class RootImageGenerator:
     def generate(self, new_shape=None, add_soil=True, add_flare=True, add_blurr=True):
 
         line1, line2 = self.generate_parallel_lines()
-        self.draw_main_root(line1, line2)
+        root_poly, root_bbox = self.draw_main_root(line1, line2)
 
-        root_poly, root_bbox = get_polygons_bbox_from_bin_image(self.root_mask)
+        # root_poly1, root_bbox2 = get_polygons_bbox_from_bin_image(self.root_mask)
 
         hair_num, hairs_poly, hairs_bbox = self.draw_hairs()
 
@@ -289,21 +321,20 @@ class RootImageGenerator:
 
         gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
         color_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
-        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=1)
+        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
 
         # soil_image = gen_soil_image((self.img_width, self.img_height),
         #                             soil_images_folder_path='soilGeneration/background_resources')
 
-        soil_gen = SoilGenerator('soilGeneration/background_resources')
-        soil_image = soil_gen.generate_image((self.img_width, self.img_height))
+        soil_image = self.get_background_image()
 
         merged_mask = apply_alpha_blending(root_hair_image, soil_image)
+        # merged_mask = back_for_ground_blending(root_hair_image, soil_image)
 
-        if add_flare:
-            merged_mask = add_light_effect(merged_mask, apply_chance=1)
+        merged_mask = add_light_effect(merged_mask, apply_chance=1)
 
         # merged_mask = apply_motion_blur(merged_mask, apply_chane=0.2)
-        merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.8)
+        merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.95)
         merged_mask = add_channel_noise(merged_mask, apply_chane=0.8)
 
 
@@ -315,8 +346,8 @@ class RootImageGenerator:
         output = {  # TODO: remove useless outputs
             "full image": merged_mask,
             "only roots": merged_mask,
-            "only hairs": self.hairs_mask,
-            "hair count": hair_num,
+            # "only hairs": self.hairs_mask,
+            # "hair count": hair_num,
             "hairs polygons": hairs_poly,
             "hairs bbox": hairs_bbox,
             "Main root bbox": root_bbox,
@@ -324,6 +355,16 @@ class RootImageGenerator:
         }
 
         return output
+
+    def get_background_image(self, chance=0.5):
+        if self.background_type == "real":
+            soil_gen = SoilGenerator('soilGeneration/background_resources')
+            soil_image = soil_gen.generate_image((self.img_width, self.img_height))
+
+        elif self.background_type == "perlin":
+            soil_image, colormap = SoilTextureGenerator().generate_soil_texture(self.img_width, self.img_height)
+
+        return soil_image
 
 
 if __name__ == '__main__':
