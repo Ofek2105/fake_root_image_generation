@@ -192,7 +192,7 @@ def annotate_specific_image_coco(coco, properties):
     im_id = coco.add_image(file_name, width=width, height=height)
 
     image = Image.fromarray(properties["full image"])
-    image.save(file_path, quality=90)
+    image.save(file_path, quality=80)
 
     if len(properties["Main root polygon"]) != 0:
         coco.add_annotation(image_id=im_id, category_id=1, segmentation=properties["Main root polygon"])  # root
@@ -287,13 +287,15 @@ def show_images():
         "hair_length_std": 30,
         "hair_thickness": 3,
         "hair_thickness_std": 2,
-        "hair_craziness": 0.95,  # 0 or 1
-        "hair_density": 0.2,
+        "hair_craziness": 0.85,  # 0 or 1
+        "hair_density": 0.3,
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": 0.20,
         "root_end_percent": 0.05,
-        "hair_type": "random_walk"  # ["bezier", "random_walk-walk"]
+        "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]
+        "background_type": "perlin"  # ["real", "perlin"]'
+
     }
     # rect_out_ = (50, 50, 250, 250)
     rect_out_ = (
@@ -307,27 +309,45 @@ def show_images():
 
 if __name__ == '__main__':
     possibilities = {
-        "root_width": [25, 15, 10],
+        "root_width": [10, 15, 20, 40],
         "root_width_std": [1, 3],
         "hair_length": [3, 20, 70],
         "hair_length_std": [30],
-        "hair_thickness": [1, 1, 2],
-        "hair_thickness_std": [2],
-        "hair_craziness": [0.9, 0.99, 0.999],  # 0 or 1
-        "hair_density": [0.3, 0.1, 0.2],
+        "hair_thickness": [1, 3, 5],
+        "hair_thickness_std": [2, 4],
+        "hair_craziness": [0.85, 0.95, 0.99],  # 0 or 1
+        "hair_density": [0.05, 0.1, 0.2, 0.3],
         "img_width": 960,
         "img_height": 960,
-        "root_start_percent": [0.20],
-        "root_end_percent": [0.10],
+        "root_start_percent": [0.05],
+        "root_end_percent": [0.15],
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
         "background_type": ["real", "perlin"]   # ["real", "perlin"]'
     }
 
+    # params = {
+    #     "root_width": [40],
+    #     "root_width_std": [3],
+    #     "hair_length": [70],
+    #     "hair_length_std": [30],
+    #     "hair_thickness": [3],
+    #     "hair_thickness_std": [2],
+    #     "hair_craziness": [0.85],  # 0 or 1
+    #     "hair_density": [0.3],
+    #     "img_width": [960],
+    #     "img_height": [960],
+    #     "root_start_percent": [0.20],
+    #     "root_end_percent": [0.05],
+    #     "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]
+    #     "background_type": "perlin"  # ["real", "perlin"]'
+    #
+    # }
+
     n_main_root = 10
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
-    show_images()
-    # create_dataset(possibilities, n_main_root, hair_gen_per_main_root)
+    # show_images()
+    create_dataset(possibilities, n_main_root, hair_gen_per_main_root)
 
     # 12/10/24
     # It seems that the model performance is worse for roots that are grayer or slightly transparent.
