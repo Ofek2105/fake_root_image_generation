@@ -234,7 +234,6 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
         return img
 
     blur_strength = np.random.choice([5, 7, 11, 11, 15, 31])
-    print(blur_strength)
     return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
 
 
