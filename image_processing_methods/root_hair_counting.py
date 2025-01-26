@@ -1,4 +1,5 @@
 import os
+import time
 
 import matplotlib.pyplot as plt
 import cv2
@@ -320,6 +321,34 @@ def get_image_hair_count(image_path, th_algo="Our", plot_report=False, blur=None
     return hair_num
 
 
+def set_right_tail_threshold(value):
+    global RIGHT_TAIL_THRESHOLD
+    RIGHT_TAIL_THRESHOLD = value
+
+
+def process_and_plot_influence(image_folder, num_images=10, thresholds=[0.65, 0.7, 0.75, 0.8, 0.9], plot_report=False):
+    images = [os.path.join(image_folder, f) for f in os.listdir(image_folder)[:num_images]]
+
+    for idx, image_path in enumerate(images):
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"Skipping invalid image: {image_path}")
+            continue
+
+        fig, axes = plt.subplots(1, len(thresholds), figsize=(20, 5))
+        fig.suptitle(f"Effect of RIGHT_TAIL_THRESHOLD on Image {idx + 1}", fontsize=16)
+
+        for i, threshold in enumerate(thresholds):
+            set_right_tail_threshold(threshold)
+            bin_image = get_root_and_hairs_mask_OG(image, plot_report)  # Simulate using the threshold in the algorithm
+            axes[i].imshow(bin_image, cmap='gray')
+            axes[i].set_title(f"Threshold: {round(1 - threshold, 2)}")
+            axes[i].axis("off")
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.85)
+        plt.show()
+
 if __name__ == '__main__':
     # image_paths = [r'../TEST DATA/base/arb_lr.png',
     #                r'../TEST DATA/base/bell_lr.jpg']
@@ -329,9 +358,22 @@ if __name__ == '__main__':
     # plot_histogram_with_thresholds(image_paths[0], our_threshold=147, otsu_threshold=127)
     # plot_histogram_with_thresholds(image_paths[1], our_threshold=102, otsu_threshold=88)
     folder_path = r'C:\Users\Ofek\Desktop\arb_root_images'
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-        n_hairs = get_image_hair_count(file_path, plot_report=False, save_bin=f"../results/bin_arb_roots/{file_name}")
+    total_time = 0
+    file_count = 0
+    process_and_plot_influence(folder_path, num_images=10)
 
-    # n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
+    # for file_name in os.listdir(folder_path):
+    #     file_path = os.path.join(folder_path, file_name)
+    #     start_time = time.time()
+    #     # n_hairs = get_image_hair_count(file_path, plot_report=False, save_bin=f"../results/bin_arb_roots/{file_name}")
+    #     n_hairs = get_image_hair_count(file_path, plot_report=False, save_bin=None)
+    #     elapsed_time = time.time() - start_time
+    #     total_time += elapsed_time
+    #     file_count += 1
+    #     # print(f"{file_name}: {n_hairs} hairs counted in {elapsed_time:.2f} seconds.")
+    #
+    # average_time = total_time / file_count if file_count > 0 else 0
+    # print(f"\nProcessed {file_count} files.")
+    # print(f"Average time to calculate root hair count: {average_time} seconds.")
+    # # n_hairs = get_image_hair_count(image_paths[1], plot_report=True)
 
