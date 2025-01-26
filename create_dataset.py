@@ -186,13 +186,21 @@ def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
 
 
 def annotate_specific_image_coco(coco, properties):
-    file_name = f"{str(time.time()).replace('.', '')}_{coco.image_id}.jpeg"
+    timestamp = str(time.time()).replace('.', '')
+    file_name = f"{timestamp}_{coco.image_id}.jpeg"
     file_path = os.path.join(coco.output_dir, file_name)
     height, width, _ = properties["full image"].shape
     im_id = coco.add_image(file_name, width=width, height=height)
 
     image = Image.fromarray(properties["full image"])
     image.save(file_path, quality=80)
+
+    if properties["shifted_images"] is not None:
+        for i, image in enumerate(properties["shifted_images"]):
+            shifted_image_file_name = f"{timestamp}_{coco.image_id}_{i}.jpeg"
+            shifted_image_file_path = os.path.join("shifted_images_datasets\\", shifted_image_file_name)
+            PIL_image = Image.fromarray(image)
+            PIL_image.save(shifted_image_file_path, quality=80)
 
     if len(properties["Main root polygon"]) != 0:
         coco.add_annotation(image_id=im_id, category_id=1, segmentation=properties["Main root polygon"])  # root
@@ -201,7 +209,7 @@ def annotate_specific_image_coco(coco, properties):
         coco.add_annotation(image_id=im_id, category_id=0, segmentation=polygon)  # hair
 
 
-def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params):
+def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params, save_shifted_images=False):
     rect_out_ = (
         params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
 
@@ -209,7 +217,7 @@ def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params)
 
         for _ in range(images_per_root):
             root_image_class = RootImageGenerator(main_root_points, **params)
-            properties = root_image_class.generate()
+            properties = root_image_class.generate(add_shifted_images=save_shifted_images)
             annotate_specific_image_coco(coco, properties)
 
 
@@ -217,9 +225,9 @@ def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
     rect_out_ = (
         params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
     for main_root_points in generator_main_roots(n_unique_roots, rect_out_):
-        root_image_class = RootImageGenerator(main_root_points, **params)
 
         for _ in range(images_per_root):
+            root_image_class = RootImageGenerator(main_root_points, **params)
             properties = root_image_class.generate()
             _, filename = save_binary_image(properties["full image"], "dataset\\images", params,
                                             annotate_specific_params_yolo.counter_id,
@@ -229,7 +237,7 @@ def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
             annotate_specific_params_yolo.counter_id += 1
 
 
-def create_dataset(all_params, n_main_root_=3, hair_gen_per_main_root_=3, dataformat="coco"):
+def create_dataset(all_params, n_main_root_=3, hair_gen_per_main_root_=3, dataformat="coco", save_shifted_images=False):
     cocoGen = COCODatasetGenerator('dataset\\')
 
     iteration_num = count_iterations(all_params)
@@ -243,7 +251,8 @@ def create_dataset(all_params, n_main_root_=3, hair_gen_per_main_root_=3, datafo
             #                               n_unique_roots=n_main_root_, params=params)
         if dataformat == "coco":
             annotate_specific_params_coco(cocoGen, images_per_root=hair_gen_per_main_root_,
-                                          n_unique_roots=n_main_root_, params=params)
+                                          n_unique_roots=n_main_root_, params=params,
+                                          save_shifted_images=save_shifted_images)
     cocoGen.save_annotations()
 
 
@@ -285,12 +294,12 @@ def show_images():
         "root_width_std": 3,
         "hair_length": 70,
         "hair_length_std": 30,
-        "hair_thickness": 3,
+        "hair_thickness": 5,
         "hair_thickness_std": 2,
-        "hair_craziness": 0.85,  # 0 or 1
+        "hair_craziness": 0.97,  # 0 or 1
         "hair_density": 0.3,
-        "img_width": 960,
-        "img_height": 960,
+        "img_width": 3000,
+        "img_height": 3000,
         "root_start_percent": 0.20,
         "root_end_percent": 0.05,
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]
@@ -309,23 +318,23 @@ def show_images():
 
 if __name__ == '__main__':
     possibilities = {
-        "root_width": [10, 15, 20, 40],
+        "root_width": [10, 20, 40],
         "root_width_std": [1, 3],
-        "hair_length": [3, 20, 70],
+        "hair_length": [3, 50],
         "hair_length_std": [30],
-        "hair_thickness": [1, 3, 5],
+        "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
-        "hair_craziness": [0.85, 0.95, 0.99],  # 0 or 1
-        "hair_density": [0.05, 0.1, 0.2, 0.3],
-        "img_width": 960,
-        "img_height": 960,
+        "hair_craziness": [0.85, 0.97],  # 0 or 1
+        "hair_density": [0.3, 0.1],
+        "img_width": 3000,
+        "img_height": 3000,
         "root_start_percent": [0.05],
         "root_end_percent": [0.15],
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
+        "background_type": ["perlin"]   # ["real", "perlin"]'
     }
 
-    # params = {
+    # possibilities = {
     #     "root_width": [40],
     #     "root_width_std": [3],
     #     "hair_length": [70],
@@ -347,7 +356,7 @@ if __name__ == '__main__':
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # show_images()
-    create_dataset(possibilities, n_main_root, hair_gen_per_main_root)
+    create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
 
     # 12/10/24
     # It seems that the model performance is worse for roots that are grayer or slightly transparent.

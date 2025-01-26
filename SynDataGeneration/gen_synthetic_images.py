@@ -212,6 +212,23 @@ class RootImageGenerator:
         for i in range(start, end, max(1, step)):
             yield i
 
+    def get_shifted_images(self, colored_image, square_ratio=0.2, n_images=8):
+        n_points = len(self.points)
+        rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
+        saved_images = []
+
+        for i, points_idx in enumerate(range(0, n_points, max(1, n_points // n_images))):
+            mid_x, mid_y = self.points[points_idx]
+            top_left_x = max(0, mid_x - rect_size[0] // 2)
+            top_left_y = max(0, mid_y - rect_size[1] // 2)
+            bottom_right_x = min(self.img_width, top_left_x + rect_size[0])
+            bottom_right_y = min(self.img_height, top_left_y + rect_size[1])
+
+            # Extract the cropped region and append
+            saved_images.append(colored_image[top_left_y:bottom_right_y, top_left_x:bottom_right_x, :])
+
+        return saved_images
+
     def draw_hairs(self):
         actual_root_count = 0
         hairs_bboxes = []
@@ -308,7 +325,7 @@ class RootImageGenerator:
 
         return root_hair_image
 
-    def generate(self, new_shape=None, add_soil=True, add_flare=True, add_blurr=True):
+    def generate(self, new_shape=None, add_shifted_images=False):
 
         line1, line2 = self.generate_parallel_lines()
         root_poly, root_bbox = self.draw_main_root(line1, line2)
@@ -337,11 +354,12 @@ class RootImageGenerator:
         merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.95)
         merged_mask = add_channel_noise(merged_mask, apply_chane=0.8)
 
-
         # if new_shape is not None:
         #     merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
             # self.root_mask = resize(merged_mask, new_shape)
             # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
+
+        shifted_images = self.get_shifted_images(merged_mask) if add_shifted_images else None
 
         output = {  # TODO: remove useless outputs
             "full image": merged_mask,
@@ -351,7 +369,8 @@ class RootImageGenerator:
             "hairs polygons": hairs_poly,
             "hairs bbox": hairs_bbox,
             "Main root bbox": root_bbox,
-            "Main root polygon": root_poly
+            "Main root polygon": root_poly,
+            "shifted_images": shifted_images
         }
 
         return output
