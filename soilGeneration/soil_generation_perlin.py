@@ -58,8 +58,6 @@ class SoilTextureGenerator:
             (139, 69, 19),  # Saddle brown
             (205, 133, 63),  # Peru
             (244, 164, 96),  # Sandy orange
-            (112, 128, 144),  # Slate gray
-            (169, 169, 169)  # Dim gray
         ]
 
         # Add randomness to the palette
@@ -71,6 +69,7 @@ class SoilTextureGenerator:
         colored_image = colormap(image)
 
         return (colored_image[..., :3] * 255).astype(np.uint8), colormap
+
 
     def generate_soil_texture(self, width=512, height=512):
         scale = random.uniform(50, 100)  # Randomize scale
