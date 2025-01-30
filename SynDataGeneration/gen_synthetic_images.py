@@ -212,20 +212,25 @@ class RootImageGenerator:
         for i in range(start, end, max(1, step)):
             yield i
 
-    def get_shifted_images(self, colored_image, square_ratio=0.2, n_images=8):
-        n_points = len(self.points)
-        rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
+
+    def get_vertical_shifted_images(self, colored_image, rootBbox, square_ratio=0.15, n_images=8):
+        main_x, main_y, main_w, main_h = rootBbox
+
+        # rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
+        rect_size = (300, 300)
+        # window_y_pos = main_y
+        # window_x_pos = main_x + main_w // 2 - rect_size[0] // 2 # having the window in the center of the structure
+        # having the window in the center of the structure
+        window_y_pos = main_y + main_h // 2 - rect_size[1] // 2
+        window_x_pos = main_x + main_w // 2 - rect_size[0] // 2
+
         saved_images = []
-
-        for i, points_idx in enumerate(range(0, n_points, max(1, n_points // n_images))):
-            mid_x, mid_y = self.points[points_idx]
-            top_left_x = max(0, mid_x - rect_size[0] // 2)
-            top_left_y = max(0, mid_y - rect_size[1] // 2)
-            bottom_right_x = min(self.img_width, top_left_x + rect_size[0])
-            bottom_right_y = min(self.img_height, top_left_y + rect_size[1])
-
-            # Extract the cropped region and append
-            saved_images.append(colored_image[top_left_y:bottom_right_y, top_left_x:bottom_right_x, :])
+        for _ in range(n_images):
+        # while window_y_pos + rect_size[1] <= main_y + main_h:
+            bottom_right_y = window_y_pos + rect_size[1]
+            bottom_right_x = window_x_pos + rect_size[0]
+            saved_images.append(colored_image[window_y_pos:bottom_right_y, window_x_pos:bottom_right_x, :])
+            window_y_pos += np.random.randint(20, 50)
 
         return saved_images
 
@@ -296,7 +301,7 @@ class RootImageGenerator:
         # Calculate bounding box
         min_x, min_y = np.min(combined_shape, axis=0)
         max_x, max_y = np.max(combined_shape, axis=0)
-        bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
+        bbox = [min_x, min_y, max_x - min_x, max_y - min_y]  # x, y, w, h
 
         return polygon_points, bbox
 
@@ -359,7 +364,7 @@ class RootImageGenerator:
             # self.root_mask = resize(merged_mask, new_shape)
             # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
-        shifted_images = self.get_shifted_images(merged_mask) if add_shifted_images else None
+        shifted_images = self.get_vertical_shifted_images(merged_mask, root_bbox) if add_shifted_images else None
 
         output = {  # TODO: remove useless outputs
             "full image": merged_mask,
