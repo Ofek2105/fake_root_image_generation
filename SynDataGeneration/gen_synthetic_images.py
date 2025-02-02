@@ -213,7 +213,7 @@ class RootImageGenerator:
             yield i
 
 
-    def get_vertical_shifted_images(self, colored_image, rootBbox, square_ratio=0.15, n_images=8):
+    def get_vertical_shifted_images(self, colored_image, rootBbox, square_ratio=0.15, n_images=5):
         main_x, main_y, main_w, main_h = rootBbox
 
         # rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
