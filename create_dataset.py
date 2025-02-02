@@ -318,20 +318,20 @@ def show_images():
 
 if __name__ == '__main__':
     possibilities = {
-        "root_width": [10, 20, 40],
+        "root_width": [20, 10, 40],
         "root_width_std": [1, 3],
-        "hair_length": [3, 50],
+        "hair_length": [3, 20, 50],
         "hair_length_std": [30],
         "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
         "hair_craziness": [0.85, 0.97],  # 0 or 1
         "hair_density": [0.3, 0.1],
-        "img_width": 3000,
-        "img_height": 3000,
+        "img_width": 960,
+        "img_height": 960,
         "root_start_percent": [0.05],
         "root_end_percent": [0.15],
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-        "background_type": ["perlin"]   # ["real", "perlin"]'
+        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
     }
 
     # possibilities = {
