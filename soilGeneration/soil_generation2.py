@@ -153,8 +153,8 @@ class SoilGenerator:
         center = np.array([width / 2, height / 2])
 
         # Create main polygon
-        min_radius = min(width, height) * 0.4
-        max_radius = min(width, height) * 0.6
+        min_radius = min(width, height) * 0.2
+        max_radius = min(width, height) * 0.55
         num_vertices = random.randint(6, 25)  # More vertices for more variation
 
         main_points = self._generate_random_polygon_points(center, min_radius, max_radius, num_vertices)
@@ -180,8 +180,8 @@ class SoilGenerator:
         cv2.fillPoly(mask, [np.int32(poly) for poly in all_polygons], 1.0)
 
         # Apply multiple gaussian blurs with different kernel sizes for more natural edges
-        mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=10)
-        mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=5)
+        mask = cv2.GaussianBlur(mask, (5, 5), sigmaX=10)
+        mask = cv2.GaussianBlur(mask, (21, 21), sigmaX=100)
 
         return mask
 
@@ -223,7 +223,7 @@ class SoilGenerator:
         return base
 
     def generate_image(self, size: Tuple[int, int], num_patches: int = 10,
-                       min_distance: int = 100) -> np.ndarray:
+                       min_distance: int = 40) -> np.ndarray:
         """
         Generate a realistic soil background image with spaced patches.
 
@@ -238,13 +238,13 @@ class SoilGenerator:
 
         # Generate and apply patches
         attempts = 0
-        max_attempts = num_patches * 5  # Maximum attempts to place all patches
+        max_attempts = num_patches * 15  # Maximum attempts to place all patches
 
         while len(existing_patches) < num_patches and attempts < max_attempts:
             # Random patch size
             patch_size = (
-                random.randint(size[0] // 5, size[0] // 3),  # Slightly smaller patches
-                random.randint(size[1] // 5, size[1] // 3)
+                random.randint(size[0] // 5, size[0] // 2),  # Slightly smaller patches
+                random.randint(size[1] // 5, size[1] // 2)
             )
 
             # Find valid position
