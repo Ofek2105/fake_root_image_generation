@@ -1,7 +1,11 @@
+import io
+
 import numpy as np
 import cv2
 import rdp
 import random
+import os
+from PIL import Image
 
 
 def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
@@ -235,6 +239,33 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
 
     blur_strength = np.random.choice([5, 7, 11, 11, 15, 31])
     return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
+
+
+def save_pipline_image(image_, path_, name_="image"):
+
+    if path_ is not None:
+        os.makedirs(path_, exist_ok=True)
+
+        if not hasattr(save_pipline_image, "counter"):
+            save_pipline_image.counter = 0
+
+        save_pipline_image.counter += 1
+        if np.max(image_) == 1:
+            cv2.imwrite(os.path.join(path_, f'{save_pipline_image.counter}_{name_}.jpg'), image_ * 255)
+        else:
+            cv2.imwrite(os.path.join(path_, f'{save_pipline_image.counter}_{name_}.jpg'), image_)
+
+
+def fig_to_array(fig, dpi=300):
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight')
+    buf.seek(0)
+    image_ = Image.open(buf)
+    image_array = np.array(image_)
+    buf.close()
+    return image_array
+
 
 
 if __name__ == "__main__":
