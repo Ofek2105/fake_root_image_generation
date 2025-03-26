@@ -4,9 +4,9 @@ import random
 from image_processing_methods.IP_funcs import (
     apply_alpha_blending,
     add_light_effect,
-    back_for_ground_blending,
     add_channel_noise,
-    apply_gaussian_blurr
+    apply_gaussian_blurr,
+    save_pipline_image
 )
 
 import numpy as np
@@ -217,20 +217,28 @@ class RootImageGenerator:
         main_x, main_y, main_w, main_h = rootBbox
 
         # rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
-        rect_size = (300, 300)
-        # window_y_pos = main_y
-        # window_x_pos = main_x + main_w // 2 - rect_size[0] // 2 # having the window in the center of the structure
+        rect_size = (600, 600)  # was (300, 300)
+
         # having the window in the center of the structure
-        window_y_pos = main_y + main_h // 2 - rect_size[1] // 2
-        window_x_pos = main_x + main_w // 2 - rect_size[0] // 2
+        window_y_pos = max(0, main_y + main_h // 2 - rect_size[1] // 2)
+        window_x_pos = max(0, main_x + main_w // 2 - rect_size[0] // 2)
 
         saved_images = []
         for _ in range(n_images):
-        # while window_y_pos + rect_size[1] <= main_y + main_h:
+            # while window_y_pos + rect_size[1] <= main_y + main_h:
             bottom_right_y = window_y_pos + rect_size[1]
             bottom_right_x = window_x_pos + rect_size[0]
-            saved_images.append(colored_image[window_y_pos:bottom_right_y, window_x_pos:bottom_right_x, :])
-            window_y_pos += np.random.randint(20, 50)
+            cut_image = colored_image[window_y_pos:bottom_right_y, window_x_pos:bottom_right_x, :]
+            if cut_image.shape[0] == 0 or cut_image.shape[1] == 0 or cut_image.shape[2] == 0:
+                print("what now?")
+
+            cut_image = cv2.resize(cut_image, (rect_size[0] // 2 ,rect_size[1] // 2), interpolation=cv2.INTER_AREA)
+
+            saved_images.append(cut_image)
+
+            # window_y_pos += np.random.randint(20, 50)
+            window_y_pos += 1
+
 
         return saved_images
 
@@ -330,34 +338,35 @@ class RootImageGenerator:
 
         return root_hair_image
 
-    def generate(self, new_shape=None, add_shifted_images=False):
+    def generate(self, add_shifted_images=False, save_pipline_path=None):
 
         line1, line2 = self.generate_parallel_lines()
         root_poly, root_bbox = self.draw_main_root(line1, line2)
 
-        # root_poly1, root_bbox2 = get_polygons_bbox_from_bin_image(self.root_mask)
-
         hair_num, hairs_poly, hairs_bbox = self.draw_hairs()
 
         root_hair_mask = np.logical_or(self.root_mask, self.hairs_mask).astype(np.uint8)
+        save_pipline_image(root_hair_mask, save_pipline_path, "root_mask")
 
         gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
         color_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
         root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
-
-        # soil_image = gen_soil_image((self.img_width, self.img_height),
-        #                             soil_images_folder_path='soilGeneration/background_resources')
+        save_pipline_image(root_hair_image, save_pipline_path, "root_hair_mask_image")
 
         soil_image = self.get_background_image()
+        save_pipline_image(soil_image, save_pipline_path, "soil_image")
 
         merged_mask = apply_alpha_blending(root_hair_image, soil_image)
-        # merged_mask = back_for_ground_blending(root_hair_image, soil_image)
+        save_pipline_image(merged_mask, save_pipline_path, "merged_image")
 
         merged_mask = add_light_effect(merged_mask, apply_chance=1)
+        save_pipline_image(merged_mask, save_pipline_path, "merged_image_lightning")
 
-        # merged_mask = apply_motion_blur(merged_mask, apply_chane=0.2)
         merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.95)
+        save_pipline_image(merged_mask, save_pipline_path, "merged_image_blurred")
+
         merged_mask = add_channel_noise(merged_mask, apply_chane=0.8)
+        save_pipline_image(merged_mask, save_pipline_path, "merged_image_channel_noise")
 
         # if new_shape is not None:
         #     merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
