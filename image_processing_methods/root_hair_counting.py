@@ -101,9 +101,19 @@ def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="",
 
 
 def get_hairs_tips_bin_image(binary_image):
+    # temp_path = r"C:\Users\Ofek\Projects\OferHadar\RootHairSementationModel\save_dump\haircounting"
     kernel = np.ones((3, 3), np.uint8)
+
+    # cv2.imwrite(f"{temp_path}\\im_1_base.jpg", binary_image)
+
     bin_image_morph = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
+
+    # cv2.imwrite(f"{temp_path}\\im_2_open.jpg", bin_image_morph)
+
     bin_image_morph = cv2.morphologyEx(bin_image_morph, cv2.MORPH_CLOSE, kernel)
+
+    # cv2.imwrite(f"{temp_path}\\im_3_close.jpg", bin_image_morph)
+
     hairs = cv2.subtract(binary_image, bin_image_morph)
     # hairs = cv2.erode(hairs, kernel, iterations=1)
     hairs = cv2.dilate(hairs, kernel, iterations=2)
@@ -350,17 +360,22 @@ def process_and_plot_influence(image_folder, num_images=10, thresholds=[0.65, 0.
         plt.show()
 
 if __name__ == '__main__':
-    # image_paths = [r'../TEST DATA/base/arb_lr.png',
-    #                r'../TEST DATA/base/bell_lr.jpg']
+    image_paths = [r'../TEST DATA/base/arb_lr.png',
+                   r'../TEST DATA/base/bell_lr.jpg']
+
+    image_paths = [r'../TEST DATA/ARBIDIOPSIS/arb_sr_x2.png',]
 
     # image_paths = [r'../TEST DATA/BELL PEPEER/SR_P1_X2.png']
-    # n_hairs = get_image_hair_count(image_paths[0], th_algo="Our", plot_report=True)
+    n_hairs = get_image_hair_count(image_paths[0], th_algo="Our", plot_report=True)
     # plot_histogram_with_thresholds(image_paths[0], our_threshold=147, otsu_threshold=127)
     # plot_histogram_with_thresholds(image_paths[1], our_threshold=102, otsu_threshold=88)
-    folder_path = r'C:\Users\Ofek\Desktop\arb_root_images'
-    total_time = 0
-    file_count = 0
-    process_and_plot_influence(folder_path, num_images=10)
+
+    # =====
+    # folder_path = r'C:\Users\Ofek\Desktop\arb_root_images'
+    # total_time = 0
+    # file_count = 0
+    # process_and_plot_influence(folder_path, num_images=10)
+    # ======
 
     # for file_name in os.listdir(folder_path):
     #     file_path = os.path.join(folder_path, file_name)
