@@ -4,6 +4,7 @@ from PIL import Image
 
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 from SynDataGeneration.gen_synthetic_images import RootImageGenerator
+from image_processing_methods.IP_funcs import fig_to_array, save_pipline_image
 from coco_json_initialization import COCODatasetGenerator
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -124,14 +125,14 @@ def scale_up_polygon(polygon, original_shape):
     return root_poly_points.astype(int)
 
 
-def plot_with_annotations(properties):
+def plot_with_annotations(properties, save_image_path=None, plot_image=True):
     # Retrieve the full image and other necessary details from fake_im_properties
     full_image = properties["full image"]
     hairs_polygons = properties["hairs polygons"]
     hairs_bbox = properties["hairs bbox"]
     root_bbox = properties["Main root bbox"]
     root_polygon = np.array(properties["Main root polygon"]).reshape((-1, 2))
-    font_size_ = 20
+    font_size_ = 11
     linewidth_poly = 1
     linewidth_bbox = 1
 
@@ -165,11 +166,15 @@ def plot_with_annotations(properties):
         # poly_points = scale_up_polygon(polygon, full_image.shape)
         polygon_s = np.array(polygon).reshape((-1, 2))
         ax[1].plot(polygon_s[:, 0], polygon_s[:, 1], color='blue',
-                   linewidth=3)
+                   linewidth=linewidth_poly)
 
     ax[0].set_axis_off()
     ax[1].set_axis_off()
-    plt.show()
+    if save_image_path is not None:
+        save_pipline_image(fig_to_array(fig, 500), save_image_path)
+    if plot_image:
+        plt.show()
+    plt.close()
 
 
 def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
@@ -200,6 +205,7 @@ def annotate_specific_image_coco(coco, properties):
             shifted_image_file_name = f"{timestamp}_{coco.image_id}_{i}.jpeg"
             shifted_image_file_path = os.path.join("shifted_images_datasets\\", shifted_image_file_name)
             PIL_image = Image.fromarray(image)
+
             PIL_image.save(shifted_image_file_path, quality=80)
 
     if len(properties["Main root polygon"]) != 0:
@@ -287,7 +293,7 @@ def count_iterations(possibilities_dict):
 def show_images():
     # np.random.seed(21)
     print("Generating and Plotting images")
-    N = 50
+    N = 10
 
     params = {
         "root_width": 40,
@@ -298,59 +304,59 @@ def show_images():
         "hair_thickness_std": 2,
         "hair_craziness": 0.97,  # 0 or 1
         "hair_density": 0.3,
-        "img_width": 3000,
-        "img_height": 3000,
+        "img_width": 960,
+        "img_height": 960,
         "root_start_percent": 0.20,
         "root_end_percent": 0.05,
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]
-        "background_type": "perlin"  # ["real", "perlin"]'
-
+        "background_type": "real"  # ["real", "perlin"]'
     }
+
     # rect_out_ = (50, 50, 250, 250)
     rect_out_ = (
         params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
 
     for main_root_points in generator_main_roots(N, rect=rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
-        properties = root_image_class.generate(add_soil=True, add_flare=True)
-        plot_with_annotations(properties)
+        properties = root_image_class.generate(save_pipline_path="pipline_images_save_dump")
+        plot_with_annotations(properties, plot_image=False, save_image_path="pipline_images_save_dump")
 
 
 if __name__ == '__main__':
+    # possibilities = {
+    #     "root_width": [20, 10, 40],
+    #     "root_width_std": [1, 3],
+    #     "hair_length": [3, 20, 50],
+    #     "hair_length_std": [30],
+    #     "hair_thickness": [3, 5],
+    #     "hair_thickness_std": [2, 4],
+    #     "hair_craziness": [0.85, 0.97],  # 0 or 1
+    #     "hair_density": [0.3, 0.1],
+    #     "img_width": 960,
+    #     "img_height": 960,
+    #     "root_start_percent": [0.05],
+    #     "root_end_percent": [0.15],
+    #     "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
+    #     "background_type": ["real", "perlin"]   # ["real", "perlin"]'
+    # }
+    #  changed the width and height from 960 to 1920 for the subpixel shift
+
     possibilities = {
-        "root_width": [20, 10, 40],
-        "root_width_std": [1, 3],
-        "hair_length": [3, 20, 50],
-        "hair_length_std": [30],
-        "hair_thickness": [3, 5],
-        "hair_thickness_std": [2, 4],
+        "root_width": [40, 20, 80],
+        "root_width_std": [2, 6],
+        "hair_length": [6, 40, 100],
+        "hair_length_std": [60],
+        "hair_thickness": [6, 10],
+        "hair_thickness_std": [4, 8],
         "hair_craziness": [0.85, 0.97],  # 0 or 1
         "hair_density": [0.3, 0.1],
-        "img_width": 960,
-        "img_height": 960,
+        "img_width": 1920,
+        "img_height": 1920,
         "root_start_percent": [0.05],
         "root_end_percent": [0.15],
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
+        "background_type": ["real", "perlin"]  # ["real", "perlin"]'
     }
-
-    # possibilities = {
-    #     "root_width": [40],
-    #     "root_width_std": [3],
-    #     "hair_length": [70],
-    #     "hair_length_std": [30],
-    #     "hair_thickness": [3],
-    #     "hair_thickness_std": [2],
-    #     "hair_craziness": [0.85],  # 0 or 1
-    #     "hair_density": [0.3],
-    #     "img_width": [960],
-    #     "img_height": [960],
-    #     "root_start_percent": [0.20],
-    #     "root_end_percent": [0.05],
-    #     "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]
-    #     "background_type": "perlin"  # ["real", "perlin"]'
-    #
-    # }
 
     n_main_root = 10
     hair_gen_per_main_root = 3
