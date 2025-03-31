@@ -218,10 +218,14 @@ class RootImageGenerator:
 
         # rect_size = (int(self.img_width * square_ratio), int(self.img_height * square_ratio))
         rect_size = (600, 600)  # was (300, 300)
+        max_shift = 40
+        min_shift = 20
 
         # having the window in the center of the structure
-        window_y_pos = max(0, main_y + main_h // 2 - rect_size[1] // 2)
-        window_x_pos = max(0, main_x + main_w // 2 - rect_size[0] // 2)
+        max_y = colored_image.shape[0] - rect_size[0] - max_shift * n_images
+        max_x = colored_image.shape[1] - rect_size[1]
+        window_y_pos = np.clip(main_y + main_h // 2 - rect_size[1] // 2, 0, max_y)
+        window_x_pos = np.clip(main_x + main_w // 2 - rect_size[0] // 2, 0, max_x)
 
         saved_images = []
         for _ in range(n_images):
@@ -232,13 +236,12 @@ class RootImageGenerator:
             if cut_image.shape[0] == 0 or cut_image.shape[1] == 0 or cut_image.shape[2] == 0:
                 print("what now?")
 
-            cut_image = cv2.resize(cut_image, (rect_size[0] // 2 ,rect_size[1] // 2), interpolation=cv2.INTER_AREA)
+            cut_image = cv2.resize(cut_image, (rect_size[0] // 2, rect_size[1] // 2), interpolation=cv2.INTER_AREA)
 
             saved_images.append(cut_image)
 
-            # window_y_pos += np.random.randint(20, 50)
-            window_y_pos += 1
-
+            random_int = np.random.randint(min_shift, max_shift)
+            window_y_pos += random_int + 1 if random_int & 2 == 0 else random_int
 
         return saved_images
 
@@ -320,7 +323,8 @@ class RootImageGenerator:
 
         base_intensity = np.max(root_hair_image)
         base_color = np.array((base_intensity, base_intensity, base_intensity))
-        color = base_color * random.uniform(0.2, 0.99)
+        color = base_color * random.uniform(0.4, 0.7)
+        # color = base_color * np.clip(np.random.normal(0.7, 0.3), 0.2, 1)
 
         width_list = np.clip(self.offset1_list, 0.5, None)
         for i, point in enumerate(self.points):
@@ -338,7 +342,7 @@ class RootImageGenerator:
 
         return root_hair_image
 
-    def generate(self, add_shifted_images=False, save_pipline_path=None):
+    def generate(self, add_shifted_images=False, save_pipline_path="pipline_save_dump_2"):
 
         line1, line2 = self.generate_parallel_lines()
         root_poly, root_bbox = self.draw_main_root(line1, line2)
@@ -348,7 +352,8 @@ class RootImageGenerator:
         root_hair_mask = np.logical_or(self.root_mask, self.hairs_mask).astype(np.uint8)
         save_pipline_image(root_hair_mask, save_pipline_path, "root_mask")
 
-        gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
+        # gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
+        gray_intensity_factor = np.clip(np.random.normal(0.9, 0.2), 0.5, 1)
         color_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
         root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
         save_pipline_image(root_hair_image, save_pipline_path, "root_hair_mask_image")
@@ -356,7 +361,7 @@ class RootImageGenerator:
         soil_image = self.get_background_image()
         save_pipline_image(soil_image, save_pipline_path, "soil_image")
 
-        merged_mask = apply_alpha_blending(root_hair_image, soil_image)
+        merged_mask = apply_alpha_blending(root_hair_image, soil_image, root_hair_mask)
         save_pipline_image(merged_mask, save_pipline_path, "merged_image")
 
         merged_mask = add_light_effect(merged_mask, apply_chance=1)
