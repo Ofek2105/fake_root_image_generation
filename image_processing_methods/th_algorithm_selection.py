@@ -108,7 +108,7 @@ def thresholds_comparing(img, plot_=True, save_path=None):
         plt.show()
 
         # Plot the histogram and thresholds in a separate figure
-        fig2, ax2 = plt.subplots(figsize=(18, 10))  # Increased the figure size for better visibility
+        fig2, ax2 = plt.subplots(figsize=(18, 10))  # Increased the figure size for better obscure
         bar_list = ax2.bar(bins[:-1] - 0.5, counts, width=1, edgecolor='none')
 
         # Highlight peak
