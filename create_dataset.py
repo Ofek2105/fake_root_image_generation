@@ -323,45 +323,45 @@ def show_images():
 
 
 if __name__ == '__main__':
-    # possibilities = {
-    #     "root_width": [20, 10, 40],
-    #     "root_width_std": [1, 3],
-    #     "hair_length": [3, 20, 50],
-    #     "hair_length_std": [30],
-    #     "hair_thickness": [3, 5],
-    #     "hair_thickness_std": [2, 4],
-    #     "hair_craziness": [0.85, 0.97],  # 0 or 1
-    #     "hair_density": [0.3, 0.1],
-    #     "img_width": 960,
-    #     "img_height": 960,
-    #     "root_start_percent": [0.05],
-    #     "root_end_percent": [0.15],
-    #     "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-    #     "background_type": ["real", "perlin"]   # ["real", "perlin"]'
-    # }
-    #  changed the width and height from 960 to 1920 for the subpixel shift
-
     possibilities = {
-        "root_width": [40, 20, 80],
-        "root_width_std": [2, 6],
-        "hair_length": [6, 40, 100],
-        "hair_length_std": [60],
-        "hair_thickness": [6, 10],
-        "hair_thickness_std": [4, 8],
+        "root_width": [20, 10, 40],
+        "root_width_std": [1, 3],
+        "hair_length": [3, 20, 50],
+        "hair_length_std": [30],
+        "hair_thickness": [3, 5],
+        "hair_thickness_std": [2, 4],
         "hair_craziness": [0.85, 0.97],  # 0 or 1
         "hair_density": [0.3, 0.1],
-        "img_width": 1920,
-        "img_height": 1920,
+        "img_width": 960,
+        "img_height": 960,
         "root_start_percent": [0.05],
         "root_end_percent": [0.15],
         "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-        "background_type": ["real", "perlin"]  # ["real", "perlin"]'
+        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
     }
+
+    # possibilities = {
+    #     "root_width": [40, 20, 80],
+    #     "root_width_std": [2, 6],
+    #     "hair_length": [6, 40, 100],
+    #     "hair_length_std": [60],
+    #     "hair_thickness": [6, 10],
+    #     "hair_thickness_std": [4, 8],
+    #     "hair_craziness": [0.85, 0.97],  # 0 or 1
+    #     "hair_density": [0.3, 0.1],
+    #     "img_width": 1920,
+    #     "img_height": 1920,
+    #     "root_start_percent": [0.05],
+    #     "root_end_percent": [0.15],
+    #     "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
+    #     "background_type": ["real", "perlin"]  # ["real", "perlin"]'
+    # } # for subpixel shift
 
     n_main_root = 10
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # show_images()
+    # create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
     create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
 
     # 12/10/24
