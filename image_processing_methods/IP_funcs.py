@@ -42,7 +42,7 @@ def get_polygons_bbox_from_bin_image(bin_image, neg_mask=None):
     return [[]], []
 
 
-def generate_random_alpha_gradient(img_size, non_linear=True, visibility=0.8, randomness=0.01):
+def generate_random_alpha_gradient(img_size, non_linear=True, obscure=0.9, randomness=0.01):
     height, width = img_size
     alpha = np.zeros((height, width), dtype=np.float32)
 
@@ -54,13 +54,13 @@ def generate_random_alpha_gradient(img_size, non_linear=True, visibility=0.8, ra
     x_indices, y_indices = np.meshgrid(np.arange(width), np.arange(height))
 
     if non_linear:
-        base_value = visibility * (
+        base_value = obscure * (
                 1 + np.sin(
             frequency * (x_direction * y_indices + y_direction * x_indices) / (height + width) * np.pi + phase_shift
         )
         )
     else:
-        base_value = visibility * (y_indices + x_indices) / (height + width)
+        base_value = obscure * (y_indices + x_indices) / (height + width)
 
     # Add random variations
     random_variation = np.random.uniform(-randomness, randomness, (height, width))
@@ -81,12 +81,16 @@ def customAddWeighted(src1, alpha, src2, beta, gamma=0):
     return blended_image
 
 
-def apply_alpha_blending(rgb_image, soil_image):
-    alpha = generate_random_alpha_gradient(rgb_image.shape[:2], non_linear=True)
+def apply_alpha_blending(rgb_image, soil_image, mask):
 
-    blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1 - alpha, 0)
+    alpha = generate_random_alpha_gradient(rgb_image.shape[:2], non_linear=True, obscure=0.35)
+    canvas = soil_image.copy()
+    canvas[mask == 1] = (rgb_image[mask == 1] * (alpha)[mask == 1][:, np.newaxis] +
+                    soil_image[mask == 1] * (1-alpha)[mask == 1][:, np.newaxis])
 
-    return blended_image
+    # blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1 - alpha, 0)
+
+    return canvas
 
 
 def back_for_ground_blending(rgb_image, soil_image):
@@ -110,27 +114,29 @@ def add_channel_noise(image, stddev=5, apply_chane=1.0):
     return noisy_image
 
 
-# def add_light_effect(image, intensity=1.5, spread=0.4, apply_chance=0.5):
-#
-#     if random.random() > apply_chance:
-#         return image
-#
-#     height, width, channels = image.shape
-#
-#     gradient = np.linspace(1, 0, height).reshape(height, 1)
-#     gradient = np.clip(gradient + spread, 0, 1)
-#     mask = np.repeat(gradient, width, axis=1)
-#     mask = np.repeat(mask[:, :, np.newaxis], channels, axis=2)
-#
-#     image = image.astype(np.float32)
-#     mask = mask.astype(np.float32)
-#
-#     brightened_image = cv2.addWeighted(image, 1.0, image * mask * intensity, 0.8, 0)
-#
-#     return np.clip(brightened_image, 0, 255).astype(np.uint8)
+def add_light_effect(image, intensity_mean=0.3, intensity_std=0.3, decay=1.5, apply_chance=0.7, reverse_chance=0.3):
+    if np.random.random() > apply_chance:
+        return image
 
+    height, width, channels = image.shape
+    source_x = np.random.uniform(-width // 2, width + width // 2)
+    source_y = np.random.uniform(-height // 2, height + height // 2)
 
-def add_light_effect(image, min_intensity=0.2, max_intensity=1.8,
+    y, x = np.mgrid[0:height, 0:width]
+    dist = np.sqrt((x - source_x) ** 2 + (y - source_y) ** 2)
+    mask = np.exp(-decay * dist / width)
+
+    if np.random.random() < reverse_chance:
+        mask = 1 - mask
+
+    mask = np.repeat(mask[:, :, np.newaxis], channels, axis=2)
+    intensity_ = np.clip(np.random.normal(intensity_mean, intensity_std), 0, 1)
+    brightened = image.astype(np.float32) + (mask * intensity_ * 255 * (1 if np.random.random() >= reverse_chance else -1))
+    brightened = np.clip(brightened, 0, 255).astype(np.uint8)
+
+    return brightened
+
+def add_light_effect_old(image, min_intensity=0.2, max_intensity=1.8,
                      min_freq=0.2, max_freq=2, apply_chance=0.5):
     """
     Apply a random directional gradient effect to an image.
