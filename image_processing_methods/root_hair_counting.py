@@ -68,7 +68,7 @@ def get_largest_contur(bin_image_, plot_=False):
 
 def get_hairs_contours(binary_image, filename=None, plot_=False, truth_count="", suptitle_=None):
     hairs_bin_image = get_hairs_tips_bin_image(binary_image)
-    hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((1, 1), np.uint8), iterations=0)
+    hairs_dilated = cv2.dilate(hairs_bin_image.copy(), np.ones((3, 3), np.uint8), iterations=2)
 
     hairs_contours, _ = cv2.findContours(hairs_bin_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -363,7 +363,9 @@ if __name__ == '__main__':
     image_paths = [r'../TEST DATA/base/arb_lr.png',
                    r'../TEST DATA/base/bell_lr.jpg']
 
-    image_paths = [r'../TEST DATA/ARBIDIOPSIS/arb_sr_x2.png',]
+    # image_paths = [r'../TEST DATA/ARBIDIOPSIS/arb_sr_x2.png']
+    image_paths = [r'../results/type_2/zoomIn.png']
+    image_paths = [r'../results/type_1/SR_P1_X4.png']
 
     # image_paths = [r'../TEST DATA/BELL PEPEER/SR_P1_X2.png']
     n_hairs = get_image_hair_count(image_paths[0], th_algo="Our", plot_report=True)
