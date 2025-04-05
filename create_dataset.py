@@ -233,7 +233,7 @@ def annotate_specific_image_coco(coco, properties):
         coco.add_annotation(image_id=im_id, category_id=0, segmentation=polygon)  # hair
 
 
-def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params, save_shifted_images=False):
+def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params, special_addons_=False):
     rect_out_ = (
         params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
 
@@ -241,7 +241,7 @@ def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params,
 
         for _ in range(images_per_root):
             root_image_class = RootImageGenerator(main_root_points, **params)
-            properties = root_image_class.generate(add_shifted_images=save_shifted_images)
+            properties = root_image_class.generate(special_addons=special_addons_)
             annotate_specific_image_coco(coco, properties)
 
 
@@ -265,7 +265,7 @@ def create_dataset(all_params,
                    hair_gen_per_main_root_=3,
                    dataformat="coco",
                    folder_name="dataset",
-                   save_shifted_images=False):
+                   special_addons=None):
 
     if dataformat == "coco":
         cocoGen = COCODatasetGenerator(f'{folder_name}\\')
@@ -286,7 +286,7 @@ def create_dataset(all_params,
                                           images_per_root=hair_gen_per_main_root_,
                                           n_unique_roots=n_main_root_,
                                           params=params,
-                                          save_shifted_images=save_shifted_images)
+                                          special_addons_=special_addons)
     cocoGen.save_annotations()
 
 
@@ -350,11 +350,41 @@ def show_images():
         plot_with_annotations(properties, plot_image=False, save_image_path="pipline_images_save_dump")
 
 
+def get_addons(vertical_shifted=False, root_darker_middle=False, light_effect=False, gaussian_blurr=False,
+               channel_noise=False):
+    return {
+        "get_vertical_shifted_images": vertical_shifted,
+        "add_root_darker_middle_effect": root_darker_middle,
+        "add_light_effect": light_effect,
+        "apply_gaussian_blurr": gaussian_blurr,
+        "add_channel_noise": channel_noise
+    }
+
+
+def get_experiments(baseline_pos):
+    baseline_pos1 = baseline_pos.copy()
+    baseline_pos2 = baseline_pos.copy()
+
+    baseline_pos1["background_type"] = ["real"]
+    baseline_pos2["background_type"] = ["perlin"]
+
+    experiments = {
+        "baseline": (baseline_pos, get_addons(False, False, False, False, False)),  # addons1
+        "root_darker_middle": (baseline_pos, get_addons(False, True, False, False, False)),  # addons2
+        "light_effect": (baseline_pos, get_addons(False, False, True, False, False)),  # addons3
+        "gaussian_blurr": (baseline_pos, get_addons(False, False, False, True, False)),  # addons4
+        "channel_noise": (baseline_pos, get_addons(False, False, False, False, True)),  # addons5
+        "real_all": (baseline_pos1, get_addons(False, True, True, True, True)),  # addons1 for baseline_pos1
+        "perlin_all": (baseline_pos2, get_addons(False, True, True, True, True))  # baseline_pos2 and baseline_pos1
+    }
+
+    return experiments
+
 if __name__ == '__main__':
     possibilities = {
         "root_width": [20, 10, 40],
         "root_width_std": [1, 3],
-        "hair_length": [3, 20, 50],
+        "hair_length": [3, 50],
         "hair_length_std": [30],
         "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
@@ -388,11 +418,26 @@ if __name__ == '__main__':
     n_main_root = 10
     hair_gen_per_main_root = 3
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
+    special_addons = {"get_vertical_shifted_images": False,
+                      "add_root_darker_middle_effect": True,
+                      "add_light_effect": False,
+                      "apply_gaussian_blurr": False,
+                      "add_channel_noise": False
+                      }
+
     # show_images()
-    # create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
-    create_dataset(possibilities,
-                   n_main_root,
-                   hair_gen_per_main_root,
-                   dataformat='yolo',
-                   folder_name="datasetV1",
-                   save_shifted_images=False)
+    # create_dataset(possibilities, n_main_root, hair_gen_per_main_root, special_addons=True)
+    # create_dataset(possibilities,
+    #                n_main_root,
+    #                hair_gen_per_main_root,
+    #                dataformat='yolo',
+    #                folder_name="datasetV1",
+    #                special_addons=special_addons)
+
+    for experiment_name, (pos, addons) in get_experiments(possibilities).items():
+        create_dataset(pos,
+                       n_main_root,
+                       hair_gen_per_main_root,
+                       dataformat='yolo',
+                       folder_name=f"dataset_{experiment_name}",
+                       special_addons=addons)

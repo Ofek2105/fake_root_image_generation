@@ -342,7 +342,15 @@ class RootImageGenerator:
 
         return root_hair_image
 
-    def generate(self, add_shifted_images=False, save_pipline_path="pipline_save_dump_2"):
+    def generate(self, special_addons=None, save_pipline_path="pipline_save_dump_2"):
+
+        if special_addons is None:
+            special_addons = {"get_vertical_shifted_images": False,
+                              "add_root_darker_middle_effect": True,
+                              "add_light_effect": True,
+                              "apply_gaussian_blurr": True,
+                              "add_channel_noise": True
+                              }
 
         line1, line2 = self.generate_parallel_lines()
         root_poly, root_bbox = self.draw_main_root(line1, line2)
@@ -354,35 +362,42 @@ class RootImageGenerator:
 
         # gray_intensity_factor = np.random.rand() * 0.5 + 0.5  # random number between 0.5 and 1
         gray_intensity_factor = np.clip(np.random.normal(0.9, 0.2), 0.5, 1)
-        color_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
-        root_hair_image = self.add_root_darker_middle_effect(color_image, apply_chane=0.7)
-        save_pipline_image(root_hair_image, save_pipline_path, "root_hair_mask_image")
+        root_hair_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
+
+        if special_addons["add_root_darker_middle_effect"]:
+            root_hair_image = self.add_root_darker_middle_effect(root_hair_image, apply_chane=0.7)
+            save_pipline_image(root_hair_image, save_pipline_path, "root_hair_mask_image")
 
         soil_image = self.get_background_image()
         save_pipline_image(soil_image, save_pipline_path, "soil_image")
 
-        merged_mask = apply_alpha_blending(root_hair_image, soil_image, root_hair_mask)
-        save_pipline_image(merged_mask, save_pipline_path, "merged_image")
+        root_hair_image = apply_alpha_blending(root_hair_image, soil_image, root_hair_mask)
+        save_pipline_image(root_hair_image, save_pipline_path, "merged_image")
 
-        merged_mask = add_light_effect(merged_mask, apply_chance=1)
-        save_pipline_image(merged_mask, save_pipline_path, "merged_image_lightning")
+        if special_addons["add_light_effect"]:
+            root_hair_image = add_light_effect(root_hair_image, apply_chance=1)
+            save_pipline_image(root_hair_image, save_pipline_path, "merged_image_lightning")
 
-        merged_mask = apply_gaussian_blurr(merged_mask, apply_chane=0.95)
-        save_pipline_image(merged_mask, save_pipline_path, "merged_image_blurred")
+        if special_addons["apply_gaussian_blurr"]:
+            root_hair_image = apply_gaussian_blurr(root_hair_image, apply_chane=0.95)
+            save_pipline_image(root_hair_image, save_pipline_path, "merged_image_blurred")
 
-        merged_mask = add_channel_noise(merged_mask, apply_chane=0.8)
-        save_pipline_image(merged_mask, save_pipline_path, "merged_image_channel_noise")
+        if special_addons["add_channel_noise"]:
+            root_hair_image = add_channel_noise(root_hair_image, apply_chane=0.8)
+            save_pipline_image(root_hair_image, save_pipline_path, "merged_image_channel_noise")
 
         # if new_shape is not None:
         #     merged_mask = cv2.resize(merged_mask, new_shape, interpolation=cv2.INTER_AREA)
             # self.root_mask = resize(merged_mask, new_shape)
             # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
-        shifted_images = self.get_vertical_shifted_images(merged_mask, root_bbox) if add_shifted_images else None
+        if special_addons["get_vertical_shifted_images"]:
+            shifted_images = self.get_vertical_shifted_images(root_hair_image, root_bbox) if add_shifted_images else None
+        else:
+            shifted_images = None
 
         output = {  # TODO: remove useless outputs
-            "full image": merged_mask,
-            "only roots": merged_mask,
+            "full image": root_hair_image,
             # "only hairs": self.hairs_mask,
             # "hair count": hair_num,
             "hairs polygons": hairs_poly,
