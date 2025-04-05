@@ -114,7 +114,7 @@ def add_channel_noise(image, stddev=5, apply_chane=1.0):
     return noisy_image
 
 
-def add_light_effect(image, intensity_mean=0.3, intensity_std=0.3, decay=1.5, apply_chance=0.7, reverse_chance=0.3):
+def add_light_effect(image, intensity_mean=0.45, intensity_std=0.3, decay=1.5, apply_chance=0.7, reverse_chance=0.3):
     if np.random.random() > apply_chance:
         return image
 
@@ -126,12 +126,14 @@ def add_light_effect(image, intensity_mean=0.3, intensity_std=0.3, decay=1.5, ap
     dist = np.sqrt((x - source_x) ** 2 + (y - source_y) ** 2)
     mask = np.exp(-decay * dist / width)
 
+    intensity_hinder = 1
     if np.random.random() < reverse_chance:
         mask = 1 - mask
+        intensity_hinder = 0.5
 
     mask = np.repeat(mask[:, :, np.newaxis], channels, axis=2)
     intensity_ = np.clip(np.random.normal(intensity_mean, intensity_std), 0, 1)
-    brightened = image.astype(np.float32) + (mask * intensity_ * 255 * (1 if np.random.random() >= reverse_chance else -1))
+    brightened = image.astype(np.float32) + mask * intensity_ * 255 * intensity_hinder
     brightened = np.clip(brightened, 0, 255).astype(np.uint8)
 
     return brightened
@@ -243,7 +245,7 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
     if random.random() > apply_chane:
         return img
 
-    blur_strength = np.random.choice([5, 7, 11, 11, 15, 31])
+    blur_strength = np.random.choice([3, 3, 5, 5, 7, 11, 11, 15])
     return cv2.GaussianBlur(img, (blur_strength, blur_strength), 0)
 
 
