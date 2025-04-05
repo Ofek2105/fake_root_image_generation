@@ -76,7 +76,7 @@ import time
 #         plt.show()
 
 
-def save_binary_image(binary_image, base_path, params, image_id, hair_count=None):
+def save_image(binary_image, base_path, params, image_id, hair_count=None):
     if not os.path.exists(base_path):
         os.makedirs(base_path)
 
@@ -180,14 +180,32 @@ def plot_with_annotations(properties, save_image_path=None, plot_image=True):
 def save_annotation_yolo(prop_: dict, base_path: str, file_name: str):
     p = pathlib.Path(base_path)
     p.mkdir(parents=True, exist_ok=True)
+    if type(prop_["Main root polygon"][0]) != int:  # if already relative values
 
-    with open(f'{base_path}\\{file_name}', 'w') as f:
-        row = f'1 {" ".join([str(val) for val in prop_["Main root polygon"]])}\n'
-        f.write(row)
-
-        for i in range(prop_["hair count"]):
-            row = f'0 {" ".join([str(val) for val in prop_["hairs polygons"][i]])}\n'
+        with open(f'{base_path}\\{file_name}', 'w') as f:
+            row = f'1 {" ".join([str(val) for val in prop_["Main root polygon"]])}\n'
             f.write(row)
+
+            hair_n = len(prop_["hairs polygons"])
+            for i in range(hair_n):
+                row = f'0 {" ".join([str(val) for val in prop_["hairs polygons"][i]])}\n'
+                f.write(row)
+    else:  # if not, change to relative values
+        image_w, image_h = prop_["full image"].shape[:2]
+        if image_w != image_h:
+            raise ValueError(f"BRO! I dont support not rectangale images here. its an easy fix tho, you need to"
+                             f"alternate between width and height in the following comprehension loops."
+                             f"it should look like this i think:"
+                             f"format(val / image_w if i % 2 == 0 else val / image_h, \'.6f\')")
+
+        with open(f'{base_path}\\{file_name}', 'w') as f:
+            row = f'1 {" ".join([format(val / image_w, ".6f") for val in prop_["Main root polygon"]])}\n'
+            f.write(row)
+
+            hair_n = len(prop_["hairs polygons"])
+            for i in range(hair_n):
+                row = f'0 {" ".join([format(val / image_w, ".6f") for val in prop_["hairs polygons"][i]])}\n'
+                f.write(row)
 
 
 def annotate_specific_image_coco(coco, properties):
@@ -227,7 +245,7 @@ def annotate_specific_params_coco(coco, images_per_root, n_unique_roots, params,
             annotate_specific_image_coco(coco, properties)
 
 
-def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
+def annotate_specific_params_yolo(images_per_root, n_unique_roots, params, folder_name_):
     rect_out_ = (
         params["img_width"] * 0.1, params["img_height"] * 0.1, params["img_width"] * 0.9, params["img_height"] * 0.9)
     for main_root_points in generator_main_roots(n_unique_roots, rect_out_):
@@ -235,29 +253,39 @@ def annotate_specific_params_yolo(images_per_root, n_unique_roots, params):
         for _ in range(images_per_root):
             root_image_class = RootImageGenerator(main_root_points, **params)
             properties = root_image_class.generate()
-            _, filename = save_binary_image(properties["full image"], "dataset\\images", params,
-                                            annotate_specific_params_yolo.counter_id,
-                                            hair_count=properties["hair count"])
+            _, filename = save_image(properties["full image"], f"{folder_name_}\\images", params,
+                                     annotate_specific_params_yolo.counter_id)
             filename_txt = filename.split('.')[0] + ".txt"
-            save_annotation_yolo(properties, "dataset\\labels", filename_txt)
+            save_annotation_yolo(properties, f"{folder_name_}\\labels", filename_txt)
             annotate_specific_params_yolo.counter_id += 1
 
 
-def create_dataset(all_params, n_main_root_=3, hair_gen_per_main_root_=3, dataformat="coco", save_shifted_images=False):
-    cocoGen = COCODatasetGenerator('dataset\\')
+def create_dataset(all_params,
+                   n_main_root_=3,
+                   hair_gen_per_main_root_=3,
+                   dataformat="coco",
+                   folder_name="dataset",
+                   save_shifted_images=False):
+
+    if dataformat == "coco":
+        cocoGen = COCODatasetGenerator(f'{folder_name}\\')
 
     iteration_num = count_iterations(all_params)
     annotate_specific_params_yolo.counter_id = 0
 
     for params in tqdm(generator_combination_dict(all_params), total=iteration_num):
         if dataformat == "yolo":
-            raise ("BRO! I changed the code so the polygons and bboxes are absolute values (not between 0 and 1)\n "
-                   "if you want yolo format again you need to change it here so it would work with everything")
-            # annotate_specific_params_yolo(images_per_root=hair_gen_per_main_root_,
-            #                               n_unique_roots=n_main_root_, params=params)
+            # raise ("BRO! I changed the code so the polygons and bboxes are absolute values (not between 0 and 1)\n "
+            #        "if you want yolo format again you need to change it here so it would work with everything")
+            annotate_specific_params_yolo(images_per_root=hair_gen_per_main_root_,
+                                          n_unique_roots=n_main_root_,
+                                          params=params,
+                                          folder_name_=folder_name)
         if dataformat == "coco":
-            annotate_specific_params_coco(cocoGen, images_per_root=hair_gen_per_main_root_,
-                                          n_unique_roots=n_main_root_, params=params,
+            annotate_specific_params_coco(cocoGen,
+                                          images_per_root=hair_gen_per_main_root_,
+                                          n_unique_roots=n_main_root_,
+                                          params=params,
                                           save_shifted_images=save_shifted_images)
     cocoGen.save_annotations()
 
@@ -362,25 +390,9 @@ if __name__ == '__main__':
     print(f'Number of Images to generate: {count_iterations(possibilities) * n_main_root * hair_gen_per_main_root}')
     # show_images()
     # create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
-    create_dataset(possibilities, n_main_root, hair_gen_per_main_root, save_shifted_images=True)
-
-    # 12/10/24
-    # It seems that the model performance is worse for roots that are grayer or slightly transparent.
-    # also I fill like all the root segmentation has the same width, look into it.
-    # TODO: add some random gray-scale for root drawing ...CHECK
-    # TODO: add some random transparency for root drawing ...CHECK
-    # TODO: add some random slight swirl in an image ... CHECK
-    # TODO: add channel jitter ...CHECK
-
-    #   26/10/24
-    # Removed swirl effect so it won't hurt the annotations
-    # we will save images in higher resolution 960 by 960
-
-    # 10/12/2024
-    # * fixed problem where all the hairs didn't got segmented
-    # * added coco support
-    # * images saved as jpeg with quality 90 (used PIL for saving)
-    # * fixed root segmentation problem when root is looping into it self
-    # * root and hairs segmentations requre less points (hairs rdp epsilon of 1; root rdp epsilon of 3)
-    # * added new background method
-    #
+    create_dataset(possibilities,
+                   n_main_root,
+                   hair_gen_per_main_root,
+                   dataformat='yolo',
+                   folder_name="datasetV1",
+                   save_shifted_images=False)
