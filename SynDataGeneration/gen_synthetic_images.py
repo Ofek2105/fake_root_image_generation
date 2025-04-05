@@ -365,7 +365,7 @@ class RootImageGenerator:
         root_hair_image = cv2.cvtColor((root_hair_mask * 255 * gray_intensity_factor).astype(np.uint8), cv2.COLOR_GRAY2RGB)
 
         if special_addons["add_root_darker_middle_effect"]:
-            root_hair_image = self.add_root_darker_middle_effect(root_hair_image, apply_chane=0.7)
+            root_hair_image = self.add_root_darker_middle_effect(root_hair_image, apply_chane=0.85)
             save_pipline_image(root_hair_image, save_pipline_path, "root_hair_mask_image")
 
         soil_image = self.get_background_image()
