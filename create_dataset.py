@@ -5,7 +5,7 @@ from PIL import Image
 from SynDataGeneration.gen_main_root_points import generator_main_roots
 from SynDataGeneration.gen_synthetic_images import RootImageGenerator
 from image_processing_methods.IP_funcs import fig_to_array, save_pipline_image
-from coco_json_initialization import COCODatasetGenerator
+from coco_json_dataset import COCODatasetGenerator
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import itertools
@@ -266,7 +266,6 @@ def create_dataset(all_params,
                    dataformat="coco",
                    folder_name="dataset",
                    special_addons=None):
-
     if dataformat == "coco":
         cocoGen = COCODatasetGenerator(f'{folder_name}\\')
 
@@ -330,7 +329,7 @@ def show_images():
         "hair_length_std": 30,
         "hair_thickness": 5,
         "hair_thickness_std": 2,
-        "hair_craziness": 0.97,  # 0 or 1
+        "hair_craziness": 0.85,  # 0 or 1
         "hair_density": 0.3,
         "img_width": 960,
         "img_height": 960,
@@ -347,7 +346,8 @@ def show_images():
     for main_root_points in generator_main_roots(N, rect=rect_out_):
         root_image_class = RootImageGenerator(main_root_points, **params)
         properties = root_image_class.generate(save_pipline_path="pipline_images_save_dump")
-        plot_with_annotations(properties, plot_image=False, save_image_path="pipline_images_save_dump")
+        # plot_with_annotations(properties, plot_image=False, save_image_path="pipline_images_save_dump")
+        plot_with_annotations(properties, plot_image=True)
 
 
 def get_addons(vertical_shifted=False, root_darker_middle=False, light_effect=False, gaussian_blurr=False,
@@ -380,12 +380,13 @@ def get_experiments(baseline_pos):
 
     return experiments
 
+
 if __name__ == '__main__':
     possibilities = {
         "root_width": [20, 10, 40],
         "root_width_std": [1, 3],
-        "hair_length": [3, 50],
-        "hair_length_std": [30],
+        "hair_length": [3, 20, 50],
+        "hair_length_std": [10, 30],
         "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
         "hair_craziness": [0.85, 0.97],  # 0 or 1
@@ -394,8 +395,8 @@ if __name__ == '__main__':
         "img_height": 960,
         "root_start_percent": [0.05],
         "root_end_percent": [0.15],
-        "hair_type": "random_walk",  # ["bezier", "random_walk-walk"]'
-        "background_type": ["real", "perlin"]   # ["real", "perlin"]'
+        "hair_type": ["bezier", "random_walk-walk"],  # ["bezier", "random_walk-walk"]'
+        "background_type": ["real", "perlin"]  # ["real", "perlin"]'
     }
 
     # possibilities = {
@@ -425,7 +426,7 @@ if __name__ == '__main__':
                       "add_channel_noise": False
                       }
 
-    # show_images()
+    show_images()
     # create_dataset(possibilities, n_main_root, hair_gen_per_main_root, special_addons=True)
     # create_dataset(possibilities,
     #                n_main_root,
@@ -434,10 +435,10 @@ if __name__ == '__main__':
     #                folder_name="datasetV1",
     #                special_addons=special_addons)
 
-    for experiment_name, (pos, addons) in get_experiments(possibilities).items():
-        create_dataset(pos,
-                       n_main_root,
-                       hair_gen_per_main_root,
-                       dataformat='yolo',
-                       folder_name=f"dataset_{experiment_name}",
-                       special_addons=addons)
+    # for experiment_name, (pos, addons) in get_experiments(possibilities).items():
+    #     create_dataset(pos,
+    #                    n_main_root,
+    #                    hair_gen_per_main_root,
+    #                    dataformat='yolo',
+    #                    folder_name=f"dataset_{experiment_name}",
+    #                    special_addons=addons)
