@@ -1,3 +1,5 @@
 __pycache__/
 **/__pycache__/
 .idea/
+SynDataGeneration/temp_folder
+pipline_images_save_dump/
