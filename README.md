@@ -1,17 +1,50 @@
-Considerations for the future:
-- Sometimes the hairs behaviour act more like a random walk then a Bézier curve. Using random walk for the hairs as well might perform even better.
-- Fixing up github repo and uploading the link to the peper
+# Synthetic Root Hair Image Generation
 
+This repository provides the code for generating synthetic, high-quality, and fully annotated images of root and root-hair structures. These images can be used for training instance segmentation models, minimizing or even eliminating the need for real-world image acquisition and annotation.
 
-two primaries objectives:
+**As described in the upcoming publication:** [Link to the paper will be updated soon]
 
-1.	Develop and evaluate a root hair counting algorithm using the synthetic dataset, assessing its performance through standard metrics.
-2.	Validate the efficacy of the synthetic dataset by comparing the algorithm's performance on synthetic images with its expected performance on real images.
-    
-contributions:
+## Examples
 
-1.	An algorithm for counting root hairs that has been tested using the synthetic dataset, demonstrating the potential of synthetic data for algorithm development.
-2.	Insights into the challenges and opportunities associated with synthetic data generation in the context of plant phenotyping, providing a foundation for future research in this area.
+[Your image showcasing example synthetic images will be added here]
 
+## Overview
 
-The width w_i  can vary along the root line to simulate natural variations in root thickness. This variation is achieved by introducing random noise or using a predefined function that modulates w_i based on the position along the root
+The process leverages a combination of techniques to create realistic and diverse synthetic images. This involves:
+
+* **Procedural Generation:** Algorithms are used to generate the intricate structures of roots and root hairs.
+* **Realistic Rendering:** Techniques are employed to simulate realistic lighting, textures, and backgrounds, making the synthetic images appear similar to real-world microscopy images.
+* **Automatic Annotation:** The generation process inherently provides precise annotations for each root and root-hair instance, eliminating the need for manual labeling.
+
+This approach allows for the creation of large, unique datasets with perfect annotations, which can significantly benefit the training of robust segmentation models for root analysis.
+
+## Requirements
+
+* Python 3.8 or higher
+* The required Python libraries are listed in `requirements.txt`.
+
+## Installation
+
+1.  Clone this repository:
+    ```bash
+    git clone <repository_url>
+    cd <repository_name>
+    ```
+2.  Install the necessary dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Usage
+
+The starting point of this repo is the 'create_dataset.py' file. you should run it to start generating photos
+with defaults configurations. 
+
+## Code Repositories
+
+* **Dataset Generation:** [Clean the code and add the GitHub repo]
+* **Segmentation Model Training and Evaluation:** [Clean the code and add the GitHub repo]
+
+## Acknowledgments
+
+This work is supported by the Israeli Ministry of Agriculture and Rural Development: Development of an automatic system for characterizing the root system for optimal irrigation and fertilization.
