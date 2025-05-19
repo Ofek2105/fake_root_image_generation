@@ -82,11 +82,10 @@ def customAddWeighted(src1, alpha, src2, beta, gamma=0):
 
 
 def apply_alpha_blending(rgb_image, soil_image, mask):
-
     alpha = generate_random_alpha_gradient(rgb_image.shape[:2], non_linear=True, obscure=0.35)
     canvas = soil_image.copy()
     canvas[mask == 1] = (rgb_image[mask == 1] * (alpha)[mask == 1][:, np.newaxis] +
-                    soil_image[mask == 1] * (1-alpha)[mask == 1][:, np.newaxis])
+                         soil_image[mask == 1] * (1 - alpha)[mask == 1][:, np.newaxis])
 
     # blended_image = customAddWeighted(rgb_image, alpha, soil_image, 1 - alpha, 0)
 
@@ -138,8 +137,41 @@ def add_light_effect(image, intensity_mean=0.45, intensity_std=0.3, decay=1.5, a
 
     return brightened
 
+
+def apply_partial_desaturation(image, apply_chance=0.2):
+    """
+    Apply partial desaturation to an image with a given probability using OpenCV.
+
+    Parameters:
+    -----------
+    image : numpy.ndarray
+        Input image of shape (height, width, 3) in RGB format
+    apply_chance : float, optional
+        Probability of applying the effect, between 0 and 1
+    desaturation_factor : float, optional
+        Factor to control how much to desaturate (0 = full grayscale, 1 = original image)
+
+    Returns:
+    --------
+    numpy.ndarray
+        Processed image with same shape as input
+    """
+    if np.random.random() > apply_chance:
+        return image
+
+    desaturation_factor = random.random()
+
+    bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    grayscale = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+    grayscale_bgr = cv2.cvtColor(grayscale, cv2.COLOR_GRAY2BGR)
+    result_bgr = cv2.addWeighted(grayscale_bgr, 1 - desaturation_factor, bgr_image, desaturation_factor, 0)
+    result = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB)
+
+    return result
+
+
 def add_light_effect_old(image, min_intensity=0.2, max_intensity=1.8,
-                     min_freq=0.2, max_freq=2, apply_chance=0.5):
+                         min_freq=0.2, max_freq=2, apply_chance=0.5):
     """
     Apply a random directional gradient effect to an image.
 
@@ -250,7 +282,6 @@ def apply_gaussian_blurr(img, apply_chane=0.5):
 
 
 def save_pipline_image(image_, path_, name_="image"):
-
     if path_ is not None:
         os.makedirs(path_, exist_ok=True)
 
@@ -265,7 +296,6 @@ def save_pipline_image(image_, path_, name_="image"):
 
 
 def fig_to_array(fig, dpi=300):
-
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight')
     buf.seek(0)
@@ -273,7 +303,6 @@ def fig_to_array(fig, dpi=300):
     image_array = np.array(image_)
     buf.close()
     return image_array
-
 
 
 if __name__ == "__main__":
