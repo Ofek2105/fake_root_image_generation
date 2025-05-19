@@ -6,7 +6,8 @@ from image_processing_methods.IP_funcs import (
     add_light_effect,
     add_channel_noise,
     apply_gaussian_blurr,
-    save_pipline_image
+    save_pipline_image,
+    apply_partial_desaturation
 )
 
 import numpy as np
@@ -391,8 +392,10 @@ class RootImageGenerator:
             # self.root_mask = resize(merged_mask, new_shape)
             # self.hairs_mask = cv2.resize(self.hairs_mask, new_shape, interpolation=cv2.INTER_AREA)
 
+        root_hair_image = apply_partial_desaturation(root_hair_image, apply_chance=0.25)
+
         if special_addons["get_vertical_shifted_images"]:
-            shifted_images = self.get_vertical_shifted_images(root_hair_image, root_bbox) if add_shifted_images else None
+            shifted_images = self.get_vertical_shifted_images(root_hair_image, root_bbox)
         else:
             shifted_images = None
 
