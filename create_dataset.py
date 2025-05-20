@@ -88,7 +88,7 @@ def save_image(image_numpy, base_path, params, image_id, hair_count=None):
     #     f"_hc{params['hair_craziness']}_hd{int(params['hair_density'] * 100)}_w{params['img_width']}"
     #     f"_h{params['img_height']}_{image_id}.png")
 
-    file_name = f"{str(time.time()).replace('.', '')}_{image_id}.png"
+    file_name = f"{str(time.time()).replace('.', '')}_{image_id}.jpeg"
     file_path = os.path.join(base_path, file_name)
     if len(image_numpy.shape) == 3:  # not bin_image
         image = Image.fromarray(image_numpy)
@@ -327,7 +327,7 @@ def show_images():
         "root_width": 20,
         "root_width_std": 3,
         "hair_length": 1,
-        "hair_length_std": 30,
+        "hair_length_std": 5,
         "hair_thickness": 5,
         "hair_thickness_std": 2,
         "hair_craziness": 0.97,  # 0 to 1
@@ -412,7 +412,7 @@ if __name__ == '__main__':
         "root_width": [20, 35, 50, 90],
         "root_width_std": [1, 3],
         "hair_length": [3, 20, 50, 70],
-        "hair_length_std": [10, 30],
+        "hair_length_std": [5, 30],
         "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
         "hair_craziness": [0.8, 0.9, 0.97, 0.99],  # 0 or 1
@@ -436,7 +436,7 @@ if __name__ == '__main__':
                       }
 
 
-    # show_images()
+    show_images()
     dataset_gen_path = "D:\ofek_nourian\projects\datasets\dataset_jolyne"
     create_dataset(possibilities,
                    n_main_root,
