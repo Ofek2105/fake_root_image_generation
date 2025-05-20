@@ -435,14 +435,19 @@ if __name__ == '__main__':
                       "add_channel_noise": False
                       }
 
-    # TODO: add grayscale transform
 
-    show_images()
-    # create_dataset(possibilities,
-    #                n_main_root,
-    #                hair_gen_per_main_root,
-    #                dataformat='yolo',
-    #                folder_name="D:\ofek_nourian\projects\datasets\dataset_jolyne")
+    # show_images()
+    dataset_gen_path = "D:\ofek_nourian\projects\datasets\dataset_jolyne"
+    create_dataset(possibilities,
+                   n_main_root,
+                   hair_gen_per_main_root,
+                   dataformat='yolo',
+                   folder_name=dataset_gen_path)
+
+    splitfolders.ratio(dataset_gen_path,
+                       output="D:\ofek_nourian\projects\datasets\dataset_jolyne_split",
+                       seed=1337, ratio=(.8, .1, .1),
+                       group_prefix=True)
 
 
 
