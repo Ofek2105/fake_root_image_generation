@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import splitfolders
 from PIL import Image
 
 from SynDataGeneration.gen_main_root_points import generator_main_roots
@@ -76,7 +77,7 @@ import time
 #         plt.show()
 
 
-def save_image(binary_image, base_path, params, image_id, hair_count=None):
+def save_image(image_numpy, base_path, params, image_id, hair_count=None):
     if not os.path.exists(base_path):
         os.makedirs(base_path)
 
@@ -89,11 +90,11 @@ def save_image(binary_image, base_path, params, image_id, hair_count=None):
 
     file_name = f"{str(time.time()).replace('.', '')}_{image_id}.png"
     file_path = os.path.join(base_path, file_name)
-    if len(binary_image.shape) == 3:  # not bin_image
-        image = Image.fromarray(binary_image)
+    if len(image_numpy.shape) == 3:  # not bin_image
+        image = Image.fromarray(image_numpy)
     else:
-        image = Image.fromarray((binary_image * 255).astype(np.uint8))
-    image.save(file_path)
+        image = Image.fromarray((image_numpy * 255).astype(np.uint8))
+    image.save(file_path, quality=80)
 
     return file_path, file_name
 
@@ -323,14 +324,14 @@ def show_images():
     N = 10
 
     params = {
-        "root_width": 60,
+        "root_width": 20,
         "root_width_std": 3,
-        "hair_length": 3,
+        "hair_length": 1,
         "hair_length_std": 30,
         "hair_thickness": 5,
         "hair_thickness_std": 2,
         "hair_craziness": 0.97,  # 0 to 1
-        "hair_density": 0.1,
+        "hair_density": 0.55,
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": 0.07,
@@ -381,21 +382,46 @@ def get_experiments(baseline_pos):
     return experiments
 
 
+# def create_multi_database():
+#     for experiment_name, (pos, addons) in get_experiments(possibilities).items():
+#         main_folder_path = r"D:\ofek_nourian\projects\datasets\performance_metrics_datasets_v2"
+#         create_dataset_path = f"{main_folder_path}\\dataset_{experiment_name}"
+#         create_split_path = f"{main_folder_path}\\dataset_split{experiment_name}"
+#         create_yaml_path = f"{main_folder_path}\\dataset_yamls{experiment_name}"
+#
+#         print(f'working on {experiment_name}')
+#         create_dataset(pos,
+#                        n_main_root,
+#                        hair_gen_per_main_root,
+#                        dataformat='yolo',
+#                        folder_name=create_dataset_path,
+#                        special_addons=addons)
+#         print(f'dataset done')
+#         splitfolders.ratio(create_dataset_path, output=create_split_path, seed=1337, ratio=(.7, .2, .1),
+#                            group_prefix=True)
+#         print('split done')
+#         create_yolo_segmentation_yaml(
+#             split_path=create_split_path,
+#             yaml_output_path=create_yaml_path
+#         )
+#         print(f'yaml done')
+
+
 if __name__ == '__main__':
     possibilities = {
-        "root_width": [35, 50, 60, 90],
+        "root_width": [20, 35, 50, 90],
         "root_width_std": [1, 3],
         "hair_length": [3, 20, 50, 70],
         "hair_length_std": [10, 30],
         "hair_thickness": [3, 5],
         "hair_thickness_std": [2, 4],
-        "hair_craziness": [0.8, 0.9, 0.97],  # 0 or 1
-        "hair_density": [0.3, 0.2, 0.1],
+        "hair_craziness": [0.8, 0.9, 0.97, 0.99],  # 0 or 1
+        "hair_density": [0.55, 0.3, 0.2, 0.1],
         "img_width": 960,
         "img_height": 960,
         "root_start_percent": [0.05],
         "root_end_percent": [0.10],
-        "hair_type": ["bezier", "random_walk-walk"],  # ["bezier", "random_walk-walk"]'
+        "hair_type": ["bezier", "random_walk"],  # ["bezier", "random_walk-walk"]'
         "background_type": ["real", "perlin"]  # ["real", "perlin"]'
     }
 
@@ -411,14 +437,14 @@ if __name__ == '__main__':
 
     # TODO: add grayscale transform
 
-    # show_images()
-    create_dataset(possibilities, n_main_root, hair_gen_per_main_root)
+    show_images()
     # create_dataset(possibilities,
     #                n_main_root,
     #                hair_gen_per_main_root,
     #                dataformat='yolo',
-    #                folder_name="datasetV1",
-    #                special_addons=special_addons)
+    #                folder_name="D:\ofek_nourian\projects\datasets\dataset_jolyne")
+
+
 
     # for experiment_name, (pos, addons) in get_experiments(possibilities).items(): # creating multiple datasets
     #     create_dataset(pos,
