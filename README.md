@@ -4,9 +4,13 @@ This repository provides the code for generating synthetic, high-quality, and fu
 
 **As described in the upcoming publication:** [Link to the paper will be updated soon]
 
-## Examples
+Examples of synthetic image generation pipline:
 
-[Your image showcasing example synthetic images will be added here]
+![App Screenshot](./README_images/pipline.png)
+Example of synthetically generated image, next to its full segmentation annotation
+
+![App Screenshot](./README_images/annotated_examples.png)
+
 
 ## Overview
 
@@ -39,11 +43,6 @@ This approach allows for the creation of large, unique datasets with perfect ann
 
 The starting point of this repo is the 'create_dataset.py' file. you should run it to start generating photos
 with defaults configurations. 
-
-## Code Repositories
-
-* **Dataset Generation:** [Clean the code and add the GitHub repo]
-* **Segmentation Model Training and Evaluation:** [Clean the code and add the GitHub repo]
 
 ## Acknowledgments
 
