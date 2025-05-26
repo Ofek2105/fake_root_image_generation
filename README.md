@@ -2,7 +2,8 @@
 
 This repository provides the code for generating synthetic, high-quality, and fully annotated images of root and root-hair structures. These images can be used for training instance segmentation models, minimizing or even eliminating the need for real-world image acquisition and annotation.
 
-**As described in the upcoming publication:** [Link to the paper will be updated soon]
+**As described in the upcoming publication: A Novel Approach for Plant Root-Hair Counting
+ and Its Improvement via Image Super-Resolution ** [Link to the paper will be updated soon]
 
 Examples of synthetic image generation pipline:
 
@@ -41,7 +42,7 @@ This approach allows for the creation of large, unique datasets with perfect ann
 
 ## Usage
 
-The starting point of this repo is the 'create_dataset.py' file. you should run it to start generating photos
+The starting point of this repo is the 'create_dataset.py' file. you should run it to start generating images
 with defaults configurations. 
 
 ## Acknowledgments
